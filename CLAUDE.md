@@ -93,17 +93,17 @@ Match what is here rather than importing habits from elsewhere.
 ## 7. Commands
 
 ```
-Build:        [BUILD COMMAND]
-Run (dev):    [RUN COMMAND]
-Tests:        [TEST COMMAND]
-Lint/format:  [LINT COMMAND]
+Install deps: uv sync
+Run (dev):    uv run asoy
+Tests:        uv run pytest
+Lint:         uv run ruff check .
+Format:       uv run ruff format .
+Build wheel:  uv build
 License scan: [LICENSE SCAN COMMAND]
 Package:      [PACKAGE COMMAND]
 ```
 
-UI framework: `pywebview` (BSD, WebView2 backend on Windows) · Language: `Python` for the pipeline and shell, HTML, CSS, and JavaScript for the frontend · Package manager: `[MANAGER]`
-
-The command block above stays unfilled until the project is scaffolded. Fill it in the same commit that creates the build tooling, and delete this paragraph then. Placeholders here are a known gap, not an oversight.
+UI framework: `pywebview` (BSD, WebView2 backend on Windows) · Language: `Python 3.12` for the pipeline and shell, HTML, CSS, and JavaScript for the frontend · Package manager: `uv`
 
 ## 8. Making a change here
 

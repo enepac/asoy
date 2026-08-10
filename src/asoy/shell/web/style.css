@@ -1,0 +1,23 @@
+/* Placeholder styling. Enough to prove the pywebview window renders. */
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}

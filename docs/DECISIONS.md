@@ -9,7 +9,7 @@
 
 ---
 
-## ADR-001 — Local desktop application
+## ADR-001 - Local desktop application
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -28,7 +28,7 @@
 
 ---
 
-## ADR-002 — Fully local inference, no cloud calls at all
+## ADR-002 - Fully local inference, no cloud calls at all
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -47,7 +47,7 @@
 
 ---
 
-## ADR-003 — Two hardware tiers with runtime detection
+## ADR-003 - Two hardware tiers with runtime detection
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -66,7 +66,7 @@
 
 ---
 
-## ADR-004 — GPU tier is a 4B model, not 8B
+## ADR-004 - GPU tier is a 4B model, not 8B
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -88,7 +88,7 @@ The testability reason: **you can only ship what you can test.** A tier that can
 
 ---
 
-## ADR-005 — Markdown is canonical; plain text is derived
+## ADR-005 - Markdown is canonical; plain text is derived
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -109,7 +109,7 @@ The delimiter is the part that earns its keep. It lets a downstream pipeline swi
 
 ---
 
-## ADR-006 — The description delimiter is a public interface
+## ADR-006 - The description delimiter is a public interface
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -126,7 +126,7 @@ The delimiter is the part that earns its keep. It lets a downstream pipeline swi
 
 ---
 
-## ADR-007 — Windows only
+## ADR-007 - Windows only
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -144,7 +144,7 @@ The delimiter is the part that earns its keep. It lets a downstream pipeline swi
 
 ---
 
-## ADR-008 — Ollama is a prerequisite, not a bundled component
+## ADR-008 - Ollama is a prerequisite, not a bundled component
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -162,7 +162,7 @@ The delimiter is the part that earns its keep. It lets a downstream pipeline swi
 
 ---
 
-## ADR-009 — Docling as the core parser, not Marker
+## ADR-009 - Docling as the core parser, not Marker
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -180,7 +180,7 @@ The delimiter is the part that earns its keep. It lets a downstream pipeline swi
 
 ---
 
-## ADR-010 — Calibre is invoked as a subprocess only
+## ADR-010 - Calibre is invoked as a subprocess only
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -198,7 +198,7 @@ The delimiter is the part that earns its keep. It lets a downstream pipeline swi
 
 ---
 
-## ADR-011 — PyMuPDF is prohibited
+## ADR-011 - PyMuPDF is prohibited
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -215,7 +215,7 @@ The delimiter is the part that earns its keep. It lets a downstream pipeline swi
 
 ---
 
-## ADR-012 — Apache 2.0, free and open source
+## ADR-012 - Apache 2.0, free and open source
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -237,7 +237,7 @@ Open source over paid because the whole dependency stack is free and open. A pai
 
 ---
 
-## ADR-013 — No telemetry, one outbound request
+## ADR-013 - No telemetry, one outbound request
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -255,7 +255,7 @@ Open source over paid because the whole dependency stack is free and open. A pai
 
 ---
 
-## ADR-014 — No DRM circumvention, ever
+## ADR-014 - No DRM circumvention, ever
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -273,7 +273,7 @@ Open source over paid because the whole dependency stack is free and open. A pai
 
 ---
 
-## ADR-015 — Chapter checkpointing
+## ADR-015 - Chapter checkpointing
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -291,7 +291,7 @@ Open source over paid because the whole dependency stack is free and open. A pai
 
 ---
 
-## ADR-016 — Failed descriptions emit a placeholder, never silence
+## ADR-016 - Failed descriptions emit a placeholder, never silence
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
@@ -309,7 +309,7 @@ Open source over paid because the whole dependency stack is free and open. A pai
 
 ---
 
-## ADR-017 — The name
+## ADR-017 - The name
 
 **Date:** 2026-08-09 · **Status:** Accepted
 
