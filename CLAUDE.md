@@ -101,9 +101,9 @@ License scan: [LICENSE SCAN COMMAND]
 Package:      [PACKAGE COMMAND]
 ```
 
-UI framework: `[FRAMEWORK]` · Language and version: `[LANGUAGE]` · Package manager: `[MANAGER]`
+UI framework: `pywebview` (BSD, WebView2 backend on Windows) · Language: `Python` for the pipeline and shell, HTML, CSS, and JavaScript for the frontend · Package manager: `[MANAGER]`
 
-Fill these in and delete this line. A brief with placeholder commands is a brief that gets ignored.
+The command block above stays unfilled until the project is scaffolded. Fill it in the same commit that creates the build tooling, and delete this paragraph then. Placeholders here are a known gap, not an oversight.
 
 ## 8. Making a change here
 

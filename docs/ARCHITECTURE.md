@@ -80,7 +80,9 @@ Everything inside this diagram runs on the user's machine. Ollama runs as a sepa
 
 ### 4.1 Desktop Shell
 
-Windows desktop application. Owns file selection, the job queue, progress reporting, per-description review, and settings. Holds no conversion logic — it drives the orchestrator and renders its state.
+Windows desktop application built with pywebview: a Python process rendering an HTML, CSS, and JavaScript frontend in the system webview (Edge WebView2). Owns file selection, the job queue, progress reporting, per-description review, and settings. Holds no conversion logic. It drives the orchestrator and renders its state.
+
+The shell and the pipeline run in one process, so progress and cancellation are direct calls rather than inter-process messages. See ADR-018.
 
 Responsible for the first-run environment check (section 6) and for surfacing which hardware tier a job ran on, since that determines the quality the user should expect.
 
@@ -160,7 +162,11 @@ No tier above GPU is shipped. A 12 GB-class tier running an 8B model would produ
 
 ## 6. Environment dependencies
 
-Ollama is a **prerequisite**, not a bundled component. The installer does not ship it, and Asoy does not manage its lifecycle.
+Two components are expected on the machine rather than shipped inside the application.
+
+**Ollama** is a prerequisite, not a bundled component. The installer does not ship it, and Asoy does not manage its lifecycle.
+
+**WebView2 Runtime** renders the interface. It is present by default on Windows 11 and on current Windows 10, and absent on older builds. Unlike Ollama it is redistributable, so the installer carries the evergreen bootstrapper and installs it silently when missing. The user is never asked to fetch it.
 
 On first run, Asoy verifies in order: Ollama is installed; Ollama is reachable on its local port; the required model is pulled. Each failure produces a specific, actionable message and a link, not a generic error. This check re-runs at every startup, because users uninstall things.
 
@@ -190,6 +196,8 @@ Job records and logs contain file paths and block-level metadata. They contain n
 | Moondream 2 | Descriptions, CPU tier | Apache 2.0 | Via Ollama |
 | Ollama | Model runtime | MIT | Local HTTP, user-installed |
 | pypdfium2 | PDF rendering | BSD/Apache | Library |
+| pywebview | Desktop shell | BSD | Library |
+| WebView2 Runtime | Frontend rendering, Windows | Microsoft, redistributable | System component |
 
 **PyMuPDF is prohibited.** It is AGPL and would relicense the application. If a transitive dependency pulls it in, that dependency is replaced, not accepted. This has caught other projects in this exact problem space.
 

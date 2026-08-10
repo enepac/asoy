@@ -327,4 +327,25 @@ Open source over paid because the whole dependency stack is free and open. A pai
 
 ---
 
+## ADR-018 - Desktop shell is pywebview, not a native toolkit
+
+**Date:** 2026-08-09 · **Status:** Accepted
+
+**Decision.** The desktop shell is pywebview: a Python process rendering an HTML, CSS, and JavaScript frontend inside the system webview. On Windows this is the Edge WebView2 runtime.
+
+**Why.** The conversion pipeline is Python by necessity, since Docling, PaddleOCR, Tesseract, and the Ollama client all live there. pywebview keeps the UI in that same process, so progress reporting, cancellation, and mid-job tier fallback are ordinary function calls rather than messages across a bridge between two languages. It is BSD licensed, which is the cleanest fit alongside Apache 2.0, and it does not bundle a renderer, so the frozen executable stays small.
+
+The review screen is the demanding surface: a long list of cropped images paired with editable descriptions and confidence flags. CSS handles that layout with less effort than a native widget toolkit, and the styling work is transferable if the frontend is ever reused.
+
+**Rejected.**
+- *PySide6 (Qt for Python)* - one language, mature, strong model and view classes for long lists. Rejected on two grounds: LGPLv3 adds a relinking obligation that conflicts with one-file packaging, and a default-styled Qt application needs substantial work to look current.
+- *Tauri* - smallest binary and the best-looking result, but adds Rust and a separate frontend toolchain, and runs Python as a sidecar process with an IPC bridge the maintainer owns.
+- *Electron* - familiar web stack, same sidecar and bridge problem as Tauri, with a much heavier install.
+
+**Consequences.** WebView2 Runtime becomes a second environment prerequisite alongside Ollama. It is preinstalled on Windows 11 and current Windows 10, absent on older builds, and can be carried by the installer's bootstrapper. The frontend is HTML and JavaScript, so the project now spans two languages even though it runs as one process, and frontend assets must be packaged with the application.
+
+**Would reverse this.** The Python to DOM bridge proving too slow or too fragile for the review screen at realistic sizes, on the order of several hundred descriptions in one book. Measure before switching, and record the measurement.
+
+---
+
 *Companion documents: `ARCHITECTURE.md` (what the system is), `RUNBOOK.md` (how to operate it), `SUPPORT.md` (what users are told), `DATA.md` (what is held).*
