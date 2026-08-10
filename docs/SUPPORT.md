@@ -87,6 +87,12 @@ Even on the GPU tier, a dense chart with several series is described more reliab
 
 Descriptions Asoy is unsure about are flagged for review, so you can correct them before narration.
 
+### The installer is large
+
+Expect a download in the region of a gigabyte, and more on disk after installation.
+
+**Why.** Asoy's document parser uses machine-learning models for page layout, reading order, and table structure, and those models run on PyTorch. There is no configuration in which the parser works without it. This is the single largest component of the install, and it is not the AI model that writes descriptions, which Ollama manages separately and downloads on its own.
+
 ### Windows only
 
 There are no macOS or Linux builds.
