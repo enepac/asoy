@@ -89,6 +89,7 @@ Match what is here rather than importing habits from elsewhere.
 - **Failure paths are written alongside the happy path**, not after. The unhappy path is where "looks finished" hides.
 - **Guards over fixes.** A bug fix without a regression test is not finished.
 - **User-facing messages are actionable.** "Ollama not found" is incomplete; the message says what to install and links it.
+- **A generalisable methodology lesson revises `BUILD-PLAYBOOK.md` in the same commit.** The playbook at the repository root is reusable method, not Asoy documentation. The trigger is narrow: something learned about *how to build* that would apply to a different project — a handoff pattern that failed and its correction, a delegation boundary that turned out wrong, a class of failure not specific to this domain, a convention that changed and why. It does not fire for a decision about Asoy (`docs/DECISIONS.md`), a defect and its fix (`docs/INCIDENTS.md`), or a user-facing limitation (`docs/SUPPORT.md`). The dividing line is whether the lesson survives a change of project. When it fires, revise the playbook in the same commit as the work that produced the lesson and name the revision in the DECISIONS NEEDED block so it is reviewable. Do not batch revisions for later; a lesson written from memory three weeks on is a worse lesson. Most commits do not qualify, and a playbook revised on every commit is noise — the point is that a future project can read it in one sitting.
 
 ## 7. Commands
 

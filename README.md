@@ -38,6 +38,9 @@ DRM-protected files are rejected at ingestion by design. Asoy contains no DRM ci
 | [INCIDENTS.md](docs/INCIDENTS.md) | What has broken before, and the guards added since |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each release, including which models shipped |
 | [CLAUDE.md](CLAUDE.md) | Working instructions for AI sessions: invariants, blast radius, conventions |
+| [BUILD-PLAYBOOK.md](BUILD-PLAYBOOK.md) | **Method, not product.** The reusable process this project was built with — describes no part of Asoy itself |
+
+The rows above the last one are the Ship Set: they describe Asoy as it is built and are maintained alongside the code. `BUILD-PLAYBOOK.md` is not one of them. It is a project-agnostic account of how the work was done, kept here only because this is the build it came from, and it is expected to move to a shared repository once a second project exists.
 
 New readers should start with `docs/ARCHITECTURE.md`. Users looking for setup help or a known limitation should start with `docs/SUPPORT.md`.
 
