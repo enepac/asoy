@@ -37,6 +37,11 @@
         }
         set("tier", label, tier.tier === "GPU" ? "ok" : "warn");
         set("tier-reason", tier.reason, "");
+        return window.pywebview.api.get_environment();
+      })
+      .then(function (env) {
+        set("environment", env.ok ? "ready" : env.status, env.ok ? "ok" : "warn");
+        set("environment-remedy", env.ok ? env.detail : env.detail + " " + env.remedy, "");
       })
       .catch(function (error) {
         answered = true;

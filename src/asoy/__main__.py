@@ -28,6 +28,11 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="print the detected hardware tier and exit without opening a window",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="check the tier and the Ollama environment, then exit; 0 if ready, 1 if not",
+    )
     return parser
 
 
@@ -45,7 +50,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"asoy {installed}")
         return 0
 
-    if args.tier:
+    if args.tier or args.check:
         from asoy.tiers import detect
 
         result = detect()
@@ -54,7 +59,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"Device: {result.device_name or 'none detected'}")
         print(f"VRAM:   {f'{vram:.2f} GiB' if vram is not None else 'not applicable'}")
         print(f"Reason: {result.reason}")
-        return 0
+
+        if not args.check:
+            return 0
+
+        from asoy.environment import check as check_environment
+
+        environment = check_environment(result.tier)
+        print()
+        print(f"Status: {'ready' if environment.ok else 'not ready'}")
+        print(f"Detail: {environment.detail}")
+        if environment.remedy:
+            print(f"Remedy: {environment.remedy}")
+        return 0 if environment.ok else 1
 
     from asoy.shell import run_window
 

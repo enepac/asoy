@@ -47,6 +47,19 @@ class ShellApi:
             "reason": result.reason,
         }
 
+    def get_environment(self) -> dict[str, object]:
+        """Return the Ollama environment check for the detected tier (ARCHITECTURE section 6)."""
+        from asoy.environment import check
+        from asoy.tiers import detect
+
+        result = check(detect().tier)
+        return {
+            "ok": result.ok,
+            "status": result.status.value,
+            "detail": result.detail,
+            "remedy": result.remedy,
+        }
+
 
 def run_window(version: str) -> int:
     """Open the shell window and block until it closes. Returns a process exit code."""
