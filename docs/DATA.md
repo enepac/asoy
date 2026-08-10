@@ -1,7 +1,7 @@
 # DATA
 
 **Project:** Asoy
-**Document status:** Current. Describes what is held, where, and for how long.
+**Document status:** Specification. Describes what will be held, where, and for how long. Binding on the implementation, not a report on a running system.
 
 > This document is short, and the shortness is the product working. Asoy runs entirely on your machine, so there is very little to account for. But "we don't collect anything" is a claim, and a claim is only worth something if it is specific enough to check. This is the specific version.
 

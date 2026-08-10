@@ -55,9 +55,10 @@ Any change to what Asoy stores or transmits appears under **Privacy**, prominent
 
 ---
 
-## [1.0.0] — [DATE]
+## [1.0.0] - Unreleased
 
-First public release.
+Planned first public release. This entry is written ahead of the build, per
+the convention above. It becomes dated when the release actually ships.
 
 ### Added
 

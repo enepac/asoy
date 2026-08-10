@@ -1,7 +1,7 @@
 # SUPPORT
 
 **Project:** Asoy
-**Audience:** Users. Written to be linked, not explained.
+**Audience:** Users. Written to be linked, not explained. Not yet published: there are no users at this stage.
 
 > **For the maintainer.** Every recurring question gets its answer written here once. When someone asks, link the section rather than retyping it. If people keep asking about something that is already documented, the documentation is unclear — fix the wording here rather than answering again.
 >

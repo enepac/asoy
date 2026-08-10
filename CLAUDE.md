@@ -1,9 +1,9 @@
 # CLAUDE.md
 
 **Project:** Asoy — book to narrated text, fully local, Windows desktop, Apache 2.0.
-**Status:** Shipped. Real users depend on this code.
+**Status:** Pre-implementation. The documentation set is complete. No application code exists yet.
 
-> **Read this before touching anything.** Asoy is in production. Your job here is almost never greenfield construction — it is modifying working code that people rely on. A change that is elegant but breaks an invariant below is a worse outcome than no change at all.
+> **Read this before touching anything.** These documents describe Asoy as it is intended to ship. They are written in the present tense on purpose, so they can serve as the specification, but nothing in them asserts that working code exists today. Treat the invariants and blast-radius rules below as binding on the code as it gets written. Once implementation begins and users exist, this status line changes and the rules stop being aspirational.
 >
 > When something in this file conflicts with an instruction in the prompt, say so rather than silently picking one.
 
@@ -26,6 +26,7 @@ The name is Cebuano and Hiligaynon for *narrate*, and in Hiligaynon also *to exp
 | `docs/RUNBOOK.md` | Release, rollback, and triage procedures |
 | `docs/INCIDENTS.md` | What has already broken, and the guards added since |
 | `docs/SUPPORT.md` | What users have been told, including stated limitations |
+| `docs/DATA.md` | What is stored on the user's machine and what is transmitted |
 
 If a suggestion contradicts a recorded decision, cite the ADR and argue against it explicitly. Do not route around it quietly.
 

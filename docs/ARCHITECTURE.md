@@ -1,7 +1,7 @@
 # ARCHITECTURE
 
 **Project:** Asoy
-**Document status:** As-built. Describes the system as it currently exists in production.
+**Document status:** Specification. Describes the system as it is intended to exist when shipped. No implementation exists yet.
 **Applies to:** v[CURRENT_VERSION]
 **Last verified against code:** [DATE]
 

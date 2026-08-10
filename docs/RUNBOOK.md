@@ -1,7 +1,7 @@
 # RUNBOOK
 
 **Project:** Asoy
-**Document status:** Operational. This is the document you open under pressure.
+**Document status:** Operational. This is the document you open under pressure. Not yet exercised: no release has been made.
 
 > Written for one person at an inconvenient hour. Procedures are checklists, not prose. If a step here is wrong, fix it the same day you discover it — a runbook you have learned to distrust is worse than no runbook.
 >
