@@ -203,6 +203,13 @@ FRONT_MATTER_THEN_CHAPTER = """
 <p>Body of the only chapter.</p>
 """
 
+WHITESPACE_RUNS = """
+<h1>Spacing</h1>
+<p>Two  spaces, a tab\tstop, and a
+line break inside the sentence.</p>
+<pre>preformatted   run</pre>
+"""
+
 ODT_TWO_CHAPTERS = """
    <text:h text:outline-level="1">The First Chapter</text:h>
    <text:p>It was a bright cold day in April, and the clocks were striking thirteen.</text:p>

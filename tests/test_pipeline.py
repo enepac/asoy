@@ -21,6 +21,7 @@ from tests.epub_fixtures import (
     CONTENT_ENCRYPTION_ALGORITHM,
     FRONT_MATTER_THEN_CHAPTER,
     ODT_TWO_CHAPTERS,
+    WHITESPACE_RUNS,
     add_encryption_xml,
     build_epub,
     build_mobi,
@@ -73,6 +74,26 @@ def test_author_text_is_verbatim(parsed_two_chapters: ParsedDocument) -> None:
     ]
     assert VERBATIM_SENTENCE in paragraphs
     assert MISSPELLED_SENTENCE in paragraphs, "author text must not be spell-fixed or escaped"
+
+
+def test_whitespace_runs_collapse_in_html_derived_formats(tmp_path: Path) -> None:
+    """ARCHITECTURE section 11: a known limitation, pinned so it stays a known one.
+
+    Docling's HTML backend folds runs of whitespace the way a browser does. That is correct HTML
+    semantics and an interpretation of invariant 3 that Asoy has inherited rather than chosen. If
+    this test starts failing, the behaviour changed underneath us and section 11 is now wrong —
+    which is the point of pinning it, not an instruction to restore the old result.
+    """
+    book = build_epub(tmp_path / "spacing.epub", [("ch1", WHITESPACE_RUNS)])
+    paragraphs = [
+        b.text
+        for chapter in parse(book).chapters
+        for b in chapter.blocks
+        if b.kind is BlockKind.PARAGRAPH
+    ]
+
+    assert "Two spaces, a tab stop, and a line break inside the sentence." in paragraphs
+    assert "preformatted   run" in paragraphs, "<pre> is exempt from the collapse"
 
 
 def test_front_matter_before_the_first_heading_is_kept(tmp_path: Path) -> None:

@@ -249,6 +249,9 @@ Stated here so they are not rediscovered as bugs.
 - **Windows only.** Not a portability limitation in the code so much as a support limitation: other platforms are not shipped because they cannot be tested.
 - **Single-job execution.** Jobs run sequentially. Concurrent conversion would contend for the same GPU and produce worse throughput, not better.
 - **Reading order in complex layouts** is Docling's judgement, and Asoy does not second-guess it. Where it is wrong, the output is wrong.
+- **Runs of whitespace are collapsed in EPUB and HTML.** Docling's HTML backend folds every run of spaces, tabs, and newlines into a single space, the way a browser does. A double space between sentences arrives as one; an indent expressed as spaces is gone; a line break inside a paragraph becomes a space. Text inside `<pre>` is exempt, and the other input paths — PDF, DOCX, ODT — are unaffected.
+
+  This is correct HTML semantics, and it is also an interpretation of invariant 3 that is now baked in. Verbatim here means the author's text as it renders, not the author's bytes: a run of whitespace in an EPUB's markup was never going to be read aloud as a run. The collapse happens inside the parser's backend before any Asoy code sees the text, so undoing it would mean parsing the source markup a second time and reconciling the two. It is stated here so it is not rediscovered as a defect, and so that the choice is on the record rather than inherited silently. Nothing downstream of the parser adds or removes whitespace from author text.
 
 ---
 
