@@ -28,9 +28,16 @@ The present tense is the forcing function. It has no room for deferral.
 
 **The code surface** (Claude Code) implements. It reads the repository, edits files, runs tests, commits, and reports.
 
-The routing rule is one sentence: **if the answer depends on what is in the repo, it belongs to the code surface; if the answer depends on what you want, it belongs to the chat surface.**
+The routing rule is one sentence: **if the answer depends on running something, it belongs to the code surface; if the answer depends on what you want, it belongs to the chat surface.**
 
-The chat surface cannot see your files. Every fact it asserts about them is from a snapshot and may be stale. That single limitation determines the whole division of labour, and forgetting it is the most common way this method degrades.
+**Correcting what this playbook used to say.** It claimed the chat surface cannot see your files, and rested the whole division of labour on that. That was true when written and is not true now. With a GitHub context source syncing the repository into project knowledge, the planning surface reads committed files directly — verified by searching it for current `DECISIONS.md`, router source, and tests, all of which came back current rather than remembered.
+
+What is actually true is narrower and more useful:
+
+- **The planning surface reads the default branch as synced.** Committed and pushed work is visible to it. Uncommitted work, unpushed commits, and anything on another branch are not — and it has no way to tell a stale sync from a current one.
+- **The division of labour still holds, for a better reason.** Reading a test is not running it. The code surface executes commands, watches them fail, and sees the working tree as it actually is. That gap is what makes the split real, and no amount of file access closes it.
+
+The practical consequence is that the honest question changed. It is no longer "can it see the file" but **"has this been run, and against what."** A surface that can read a test suite and cannot run it will describe passing tests with total confidence.
 
 ---
 
@@ -153,9 +160,11 @@ Working directory: <absolute path>
 <numbered tasks, each with exact anchor text and replacement>
 
 EMIT MANIFEST
-ANCHOR: provenance of every anchor. Read from the file this turn,
-  or carried from an earlier snapshot and therefore UNVERIFIED.
-  On mismatch, abort and report. Never approximate.
+ANCHOR: provenance of every anchor. Read from the synced default
+  branch, or carried from an earlier snapshot and therefore
+  UNVERIFIED, or known to sit on uncommitted work and therefore
+  unreadable from here. On mismatch, abort and report. Never
+  approximate.
 CHECK: exact commands with expected values, run before and after.
 CONSTRAINT: what the payload must not contain, and what the
   artifacts the instructions produce must not contain.
@@ -166,11 +175,17 @@ COMMIT
 
 ### Why the manifest exists
 
-The chat surface writes anchors from a snapshot. Files change. An anchor recited from memory that no longer matches produces either a failed edit or, worse, an approximate one.
+Anchors go stale. An anchor that no longer matches produces either a failed edit or, worse, an approximate one.
 
-**Abort-on-mismatch is the load-bearing instruction.** During the Asoy build it caught arithmetic errors in expected counts more than once, and each time the code surface reported the mismatch rather than adjusting the code to satisfy a wrong expectation. That behaviour is what makes the checks worth writing.
+**Abort-on-mismatch is the load-bearing instruction.** During the Asoy build it caught arithmetic errors in expected counts more than once, and each time the code surface reported the mismatch rather than adjusting the code to satisfy a wrong expectation. That behaviour is what makes the checks worth writing. It is worth having whatever the anchor's provenance, because the failure it catches is a wrong expectation, not a wrong quotation.
 
-**State provenance honestly.** If an anchor was not read from the target this turn, label it UNVERIFIED. The code surface can then confirm before editing, which is the correct division: the surface that can see the file does the seeing.
+**State provenance honestly, and UNVERIFIED is no longer the default.** Where an anchor comes from now has three answers rather than two:
+
+- **Read from the synced default branch.** Verified. This covers most anchors in a project with a GitHub context source, and labelling them UNVERIFIED out of habit is its own kind of dishonesty — it trains the code surface to ignore the label.
+- **Read from the branch, but the working tree may have moved.** Uncommitted or unpushed work is invisible to the planning surface, and it cannot detect that from its side. If you know work is in flight, say so; the code surface confirms against the tree.
+- **Carried from an earlier snapshot in conversation.** UNVERIFIED, as before.
+
+The division holds either way: the surface that can see the working tree does the seeing.
 
 ### When to stop writing tight handoffs
 
@@ -198,7 +213,7 @@ Right for repository setup, identity, licensing boundaries, and anything where a
 
 Right for feature work. The code surface builds, tests, commits, and reports. You review.
 
-**The failure mode of over-gating is invisible while it happens.** Each step looks careful. What it actually produces is one round trip per commit through a surface that cannot see the code, while the surface that can see the code waits for instructions.
+**The failure mode of over-gating is invisible while it happens.** Each step looks careful. What it actually produces is one round trip per commit through a surface that cannot run the code, while the surface that can run it waits for instructions.
 
 ### The convention that makes loose delegation safe
 
@@ -253,6 +268,7 @@ Two halves carry the weight. **Same commit**, because a lesson reconstructed fro
 | Personal email in public package metadata | Settle identity before the first push |
 | Tier detection asked a library, not the hardware | Ask the question you mean |
 | A decision log entry referenced text that did not exist | Cross-references are checkable; check them |
+| An access limit was asserted without checking the mechanism that actually applied | Test the access before describing it. "I cannot see your files" was written into the method and outlived the sync that made it false |
 
 ---
 
