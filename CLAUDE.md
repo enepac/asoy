@@ -1,9 +1,9 @@
 # CLAUDE.md
 
 **Project:** Asoy — book to narrated text, fully local, Windows desktop, Apache 2.0.
-**Status:** Pre-implementation. The documentation set is complete. No application code exists yet.
+**Status:** Implementation underway. The documentation set is complete. The pipeline converts a text-only document end to end — routing, DRM rejection, parsing, assembly, and export — from the desktop shell or from `asoy convert`. Description generation, OCR, the block classifier, checkpointing, and the review UI are not built. No release has been made and there are no users.
 
-> **Read this before touching anything.** These documents describe Asoy as it is intended to ship. They are written in the present tense on purpose, so they can serve as the specification, but nothing in them asserts that working code exists today. Treat the invariants and blast-radius rules below as binding on the code as it gets written. Once implementation begins and users exist, this status line changes and the rules stop being aspirational.
+> **Read this before touching anything.** These documents describe Asoy as it is intended to ship. They are written in the present tense on purpose, so they can serve as the specification, and part of what they describe is now built. Do not assume either way: the status line above says what exists, and where it and a document disagree, the code settles it. The invariants and blast-radius rules below bind the code that exists and the code still to be written equally.
 >
 > When something in this file conflicts with an instruction in the prompt, say so rather than silently picking one.
 

@@ -69,6 +69,22 @@ Documents written as-built will assert that code and users exist. The moment the
 
 The prose stays valuable as a specification. The status line stops it from lying.
 
+That is the line Asoy actually shipped with, and it is the wrong shape. Read the next subsection before copying it.
+
+### The correction to that correction
+
+**A status line is not written once. It is the one line in the document guaranteed to go stale, because it is the only line about the present.** Asoy's said "no application code exists yet" through five commits that added application code. Nothing flagged it: every commit updated the sections it touched, exactly as the convention required, and the header was not a section anybody touched.
+
+Three things follow.
+
+**Say what exists, not what does not.** "No implementation exists yet" has one true moment and is wrong forever after. A line naming which components are built and which are not stays useful as the answer changes, and it is obviously stale when it is, because a reader can check it against the tree.
+
+**Give the document a "last verified against code" date.** An undated claim about the present is unfalsifiable. A dated one invites the check.
+
+**Sweep for the claim, do not fix the file you noticed.** The same sentence gets copied into every document in the set, and into the playbook that recommended it. Grep the phrase across the repository and fix every instance in one commit, or the next session finds the copy you missed and reasons from it.
+
+The general form: **a claim about project state is a claim with an expiry date, and it belongs where it will be re-read, not where it was convenient to write.** The as-built documents are worth the discipline. The status line is the price of writing them early.
+
 ---
 
 ## 2. Phase sequence

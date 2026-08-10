@@ -1,11 +1,13 @@
 # ARCHITECTURE
 
 **Project:** Asoy
-**Document status:** Specification. Describes the system as it is intended to exist when shipped. No implementation exists yet.
+**Document status:** Specification, partly built. Describes the system as it is intended to exist when shipped. Sections 4.1 through 4.4, 4.8, and 4.9 exist in code for the text-only path; the OCR layer (4.5), block classifier (4.6), and description generator (4.7) do not, and neither does checkpointing or the review UI.
 **Applies to:** No released version yet. This describes the target for 1.0.0.
-**Last verified against code:** Not applicable. No code exists to verify against.
+**Last verified against code:** 2026-08-10, at the commit adding the Calibre subprocess and the `asoy convert` command.
 
 > This document describes what Asoy *is*, not what it was planned to be. If the code and this document disagree, the code is right and this document is a bug. Update it in the same commit as the change.
+>
+> Present tense here does not mean built. The status line above is the authority on what exists; check it before reasoning from a section as though it describes running code.
 
 ---
 
