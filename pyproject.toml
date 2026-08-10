@@ -7,7 +7,7 @@ license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.12,<3.13"
 authors = [
-    { name = "Enrico Acha", email = "enrico.acha@gmail.com" }
+    { name = "Enrico Acha", email = "22210591enepac@users.noreply.github.com" }
 ]
 keywords = ["audiobook", "accessibility", "ebook", "narration", "local-first"]
 classifiers = [
