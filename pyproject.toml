@@ -20,6 +20,7 @@ classifiers = [
 ]
 dependencies = [
     "docling>=2.118.1",
+    "nvidia-ml-py>=13.610.43",
     "ollama>=0.6.2",
     "pypdfium2>=5.12.1",
     "pywebview>=5.3",

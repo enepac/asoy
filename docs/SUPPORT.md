@@ -45,7 +45,7 @@ If Asoy says Ollama is unreachable but Ollama is running, it is usually on a non
 
 Asoy runs in one of two modes, chosen automatically based on your hardware. The active tier is always shown in the interface.
 
-**GPU tier** — you have a graphics card with 6 GB of video memory or more. Descriptions are fuller and more accurate. Conversion is substantially faster.
+**GPU tier** — you have a graphics card with 6 GB of video memory or more. Descriptions are fuller and more accurate.
 
 **CPU tier** — you do not. Asoy still works, using a smaller model.
 

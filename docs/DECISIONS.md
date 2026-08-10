@@ -364,7 +364,7 @@ A single engine also means output differs between tiers by speed, not by model. 
 - *Keeping Tesseract for CPU and PaddleOCR for GPU* - the specified design, written before the dependency tree was resolved. Costs a system prerequisite, 28 packages, two LGPL dependencies, and a numpy ceiling, to run models already present.
 - *RapidOCR for both tiers with PaddleOCR as an optional extra* - keeps the numpy coupling and the LGPL packages alive for a fallback that may never be used.
 
-**Consequences.** ONNX Runtime inference has not been benchmarked against native PaddlePaddle on the development card. Accuracy should be identical since the models are, but throughput is unmeasured. PyTorch is already in the tree for Docling's layout models, so the GPU backend adds no weight.
+**Consequences.** ONNX Runtime inference has not been benchmarked against native PaddlePaddle on the development card. Accuracy should be identical since the models are, but throughput is unmeasured. PyTorch is in the tree for Docling's layout models, but the wheel that resolves from PyPI on Windows is the CPU-only build. A CUDA-accelerated OCR backend would need onnxruntime-gpu, which is a separate package and not currently installed. See ADR-021.
 
 **Would reverse this.** A measured benchmark showing the ONNX path is materially slower on a full book on 6 GB-class hardware. Measure before switching, and record the measurement.
 
@@ -383,6 +383,29 @@ A single engine also means output differs between tiers by speed, not by model. 
 **Consequences.** The installer will be large. Installer size is therefore a stated expectation in SUPPORT.md rather than a defect, and any future work on reducing it starts from the Docling model stack, not from Ollama.
 
 **Would reverse this.** Docling offering a layout backend that does not require PyTorch, or a decision to replace Docling, which would reopen ADR-009.
+
+---
+
+## ADR-021 - Tier detection queries the driver, not torch
+
+**Date:** 2026-08-10 · **Status:** Accepted. Refines ADR-003's detection mechanism; the two-tier structure is unchanged.
+
+**Decision.** Hardware tier detection uses NVML through nvidia-ml-py. It does not use torch.cuda.is_available().
+
+**Why.** The two questions are different, and only one of them is the question ADR-003 asks. torch.cuda.is_available() reports whether the installed torch build was compiled with CUDA support. The tier needs to know whether the machine has a capable GPU. On the development machine those answers diverged: an RTX 3050 with 6144 MiB and a working driver classified as CPU tier, because the torch wheel that resolves from PyPI on Windows is CPU-only.
+
+That divergence is not a development-machine quirk. Every user installing Asoy today would have received the CPU-only wheel, so the GPU tier was unreachable for everyone regardless of hardware. NVML queries the driver directly and answers the hardware question correctly.
+
+**What the tier actually governs, and what it does not.** The description model is selected inside Ollama, a separate process performing its own GPU detection, so it benefits from the GPU tier independently of anything Asoy installs. That is where ADR-002 and ADR-004 locate the quality difference, and it works. Docling's layout and table models run on the CPU-only torch build, and RapidOCR runs on CPU ONNX Runtime. So the GPU tier currently delivers better descriptions but not the faster conversion that ARCHITECTURE section 5 implies.
+
+**Rejected.**
+- *Installing a CUDA torch build from the PyTorch index* - would fix detection and accelerate Docling's layout pass, at roughly 2.5 GB instead of 470 MB. Rejected for now because it contradicts the installer-size expectation stated in SUPPORT.md and ADR-020 on the day both were written, and because no conversion pipeline exists yet to measure whether the layout pass is the dominant cost.
+- *An optional CUDA extra* - same objection at present, and a reasonable addition once there is a benchmark to justify it.
+- *Dropping the GPU tier* - the description-quality difference is real and is delivered today.
+
+**Consequences.** Known gap: GPU-tier conversion speed is not yet what the architecture describes. Closing it means adding onnxruntime-gpu for OCR, which is the cheaper and more useful half, and possibly a CUDA torch build for layout, which is the expensive half. Neither should be decided without a measured conversion.
+
+**Would reverse this.** Nothing reverses using NVML for detection; it is simply the correct question. The related speed gap is addressed by adding acceleration packages, which is a separate decision resting on a benchmark.
 
 ---
 

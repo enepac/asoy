@@ -160,6 +160,8 @@ Detected once at startup. Reported in the UI and recorded in every job record.
 | GPU | CUDA device with 6 GB VRAM or more | RapidOCR, CUDA backend | Qwen3-VL-4B Q4 (~4 GB) | Full |
 | CPU | No CUDA device, or under 6 GB VRAM | RapidOCR, CPU backend | Moondream 2 (~2 GB) | Reduced |
 
+Tier detection queries the NVIDIA driver through NVML, not the installed inference libraries, because those report their own build configuration rather than the machine's hardware. See ADR-021.
+
 **The quality difference is real and must be stated to the user, not hidden.** On the CPU tier, charts are described qualitatively — the shape and direction of the data — rather than numerically. Specific values are frequently missed. Photographs and illustrations degrade far less.
 
 No tier above GPU is shipped. A 12 GB-class tier running an 8B model would produce better chart descriptions, but it is excluded because it cannot be tested on available hardware, and an untestable tier cannot be supported. See `DECISIONS.md`.
