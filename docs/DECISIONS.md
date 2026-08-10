@@ -11,7 +11,7 @@
 
 ## ADR-001 — Local desktop application
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** Asoy is a desktop application. Books are processed on the user's machine and never uploaded.
 
@@ -30,7 +30,7 @@
 
 ## ADR-002 — Fully local inference, no cloud calls at all
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** OCR and non-text description both run locally. There is no cloud vision model, no bring-your-own-key path, and no online fallback.
 
@@ -49,7 +49,7 @@
 
 ## ADR-003 — Two hardware tiers with runtime detection
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** Two tiers, detected at startup: a GPU tier and a CPU fallback. Both are supported; the active tier is shown to the user and recorded in every job.
 
@@ -68,7 +68,7 @@
 
 ## ADR-004 — GPU tier is a 4B model, not 8B
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** The GPU tier runs Qwen3-VL-4B at Q4. No larger tier is shipped.
 
@@ -90,7 +90,7 @@ The testability reason: **you can only ship what you can test.** A tier that can
 
 ## ADR-005 — Markdown is canonical; plain text is derived
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** The pipeline emits Markdown as the source of truth, with chapter structure preserved as headings and every description wrapped in an explicit delimiter. A flattened `.txt` is generated from it.
 
@@ -111,7 +111,7 @@ The delimiter is the part that earns its keep. It lets a downstream pipeline swi
 
 ## ADR-006 — The description delimiter is a public interface
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** The delimiter's shape and attributes are treated as a published contract. Changing it is a breaking change requiring a major version bump.
 
@@ -128,7 +128,7 @@ The delimiter is the part that earns its keep. It lets a downstream pipeline swi
 
 ## ADR-007 — Windows only
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** Windows is the only shipped platform. macOS and Linux builds are not produced.
 
@@ -146,7 +146,7 @@ The delimiter is the part that earns its keep. It lets a downstream pipeline swi
 
 ## ADR-008 — Ollama is a prerequisite, not a bundled component
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** The installer does not ship a model runtime. It verifies Ollama is installed, reachable, and has the required model pulled, and guides the user through each missing step.
 
@@ -164,7 +164,7 @@ The delimiter is the part that earns its keep. It lets a downstream pipeline swi
 
 ## ADR-009 — Docling as the core parser, not Marker
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** Docling is the document parsing layer.
 
@@ -182,7 +182,7 @@ The delimiter is the part that earns its keep. It lets a downstream pipeline swi
 
 ## ADR-010 — Calibre is invoked as a subprocess only
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** Kindle and legacy formats are handled by calling Calibre's `ebook-convert` over the command line. Calibre is never linked, imported, or bundled into the application.
 
@@ -200,7 +200,7 @@ The delimiter is the part that earns its keep. It lets a downstream pipeline swi
 
 ## ADR-011 — PyMuPDF is prohibited
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** PyMuPDF may not appear in the dependency tree, directly or transitively. pypdfium2 is used for PDF rendering.
 
@@ -217,7 +217,7 @@ The delimiter is the part that earns its keep. It lets a downstream pipeline swi
 
 ## ADR-012 — Apache 2.0, free and open source
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** Asoy is free and open source under Apache 2.0, in a public repository. No paid tier, no license keys, no freemium unlock.
 
@@ -239,7 +239,7 @@ Open source over paid because the whole dependency stack is free and open. A pai
 
 ## ADR-013 — No telemetry, one outbound request
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** The only network request the application makes is a version check. It carries the current version and nothing else, and it is disableable.
 
@@ -257,7 +257,7 @@ Open source over paid because the whole dependency stack is free and open. A pai
 
 ## ADR-014 — No DRM circumvention, ever
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** Asoy contains no DRM-stripping code and loads no plugins that provide it. DRM-protected files are rejected at ingestion with an explanation.
 
@@ -275,7 +275,7 @@ Open source over paid because the whole dependency stack is free and open. A pai
 
 ## ADR-015 — Chapter checkpointing
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** Jobs checkpoint at chapter boundaries. A crashed or cancelled job resumes rather than restarting.
 
@@ -293,7 +293,7 @@ Open source over paid because the whole dependency stack is free and open. A pai
 
 ## ADR-016 — Failed descriptions emit a placeholder, never silence
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** When the model returns an empty or degenerate description, the block is retried once and then emitted as an explicit placeholder marking that a visual element could not be described.
 
@@ -311,7 +311,7 @@ Open source over paid because the whole dependency stack is free and open. A pai
 
 ## ADR-017 — The name
 
-**Date:** [DATE] · **Status:** Accepted
+**Date:** 2026-08-09 · **Status:** Accepted
 
 **Decision.** The project is named **Asoy**.
 

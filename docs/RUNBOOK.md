@@ -25,7 +25,7 @@ Everything needed to ship. If any line is out of date, this runbook is broken.
 
 | What | Where it lives | Notes |
 |---|---|---|
-| Source repository | `github.com/[ORG]/asoy` | Public, Apache 2.0 |
+| Source repository | `github.com/enepac/asoy` | Public, Apache 2.0 |
 | Release artifacts | GitHub Releases | Installers attached per tag |
 | Code signing certificate | `[LOCATION]` | See §2 for expiry |
 | Signing certificate password | `[PASSWORD MANAGER ENTRY]` | Never in the repo, never in CI logs |

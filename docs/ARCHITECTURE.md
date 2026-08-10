@@ -2,8 +2,8 @@
 
 **Project:** Asoy
 **Document status:** Specification. Describes the system as it is intended to exist when shipped. No implementation exists yet.
-**Applies to:** v[CURRENT_VERSION]
-**Last verified against code:** [DATE]
+**Applies to:** No released version yet. This describes the target for 1.0.0.
+**Last verified against code:** Not applicable. No code exists to verify against.
 
 > This document describes what Asoy *is*, not what it was planned to be. If the code and this document disagree, the code is right and this document is a bug. Update it in the same commit as the change.
 
