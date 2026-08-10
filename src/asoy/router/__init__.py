@@ -27,6 +27,7 @@ DIRECT_FORMATS = frozenset(
         ".xlsx",
         ".html",
         ".htm",
+        ".odt",
         ".txt",
         ".md",
         ".png",
@@ -38,8 +39,10 @@ DIRECT_FORMATS = frozenset(
     }
 )
 
-# Formats that must be converted to EPUB by Calibre first. ODT and RTF sit here per section 4.3
-# even though Docling lists ODT support, because the routing table is the specification.
+# Formats that must be converted to EPUB by Calibre first, because Docling has no backend for
+# them. That is the whole membership test: the subprocess boundary is a cost, not a default, and
+# a format Docling reads itself does not pay it. RTF is here and ODT is not, because Docling
+# 2.118.1 reads ODT natively and has no RTF backend at all. See ADR-023.
 CALIBRE_FORMATS = frozenset(
     {
         ".mobi",
@@ -49,7 +52,6 @@ CALIBRE_FORMATS = frozenset(
         ".lit",
         ".pdb",
         ".rtf",
-        ".odt",
     }
 )
 

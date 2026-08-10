@@ -109,11 +109,11 @@ Occasionally the model fails on a block. When that happens Asoy writes an explic
 
 ## Supported formats
 
-**Works well:** EPUB, DOCX, HTML, plain text.
+**Works well:** EPUB, DOCX, ODT, HTML, plain text.
 
 **Works, with the caveats above:** PDF, images, scanned documents.
 
-**Works via conversion:** MOBI, AZW, AZW3, FB2, and other legacy formats. These require Calibre to be installed; Asoy calls it to convert them first.
+**Works via conversion:** MOBI, AZW, AZW3, FB2, RTF, and other legacy formats. These require Calibre to be installed; Asoy calls it to convert them first.
 
 **Not supported:** any DRM-protected file, in any format.
 

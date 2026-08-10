@@ -431,4 +431,35 @@ Composing the Markdown ourselves also keeps the structural characters countable.
 
 ---
 
+## ADR-023 - ODT goes direct to Docling; RTF stays behind the Calibre boundary
+
+**Date:** 2026-08-10 · **Status:** Accepted. Amends the routing table in ARCHITECTURE section 4.3. ADR-010 is unchanged.
+
+**Decision.** ODT routes directly to Docling. RTF continues to route through Calibre's `ebook-convert`, alongside MOBI, AZW, AZW3, FB2, LIT, and PDB.
+
+**Why.** ADR-010's subprocess boundary exists to reach formats only Calibre can read. It is a cost, not a default. It makes a GPLv3 program a prerequisite the user has to find and install, which is the same friction ADR-008 accepted reluctantly for Ollama and named as the product's largest support burden. It sends the book through an intermediate EPUB, so what Docling parses is Calibre's rendering of the file rather than the file. And it is a licensing boundary that has to be maintained forever. A format Docling reads itself should not pay any of that.
+
+Docling reads ODT natively through its OpenDocument backend, at MIT (ADR-009). Routing ODT to Calibre bought nothing in exchange for all three costs. The original routing table appears to have grouped ODT with RTF as "office and legacy formats" rather than by what Docling can actually read, which is the only distinction that matters here.
+
+RTF is a different case, and the difference is simply that Docling cannot read it. Docling 2.118.1 has no RTF member in `InputFormat`, no RTF backend, and no optional extra that supplies one; its OpenDocument formats are `odt`, `ods`, and `odp` only. Checked against the installed version rather than assumed. RTF therefore stays on Calibre for exactly the reason MOBI does.
+
+**Why the boundary still holds for MOBI, AZW, AZW3, and FB2.** Restated so this is not read as an erosion of ADR-010. Docling has no backend for any of them. The Kindle formats are Amazon's, documented by reverse engineering rather than by specification, and Calibre's readers are the only serious implementations of them; FB2 is niche enough that the same is true in practice. Writing our own readers to avoid the prerequisite would mean reimplementing working software for licensing hygiene we already have a correct answer for. ADR-010's reasoning is untouched: those formats need Calibre, Calibre is GPLv3, and the command line is what keeps Apache 2.0 intact. This decision only stops sending that boundary work it was never needed for.
+
+**Rejected.**
+- *Route RTF direct as well* — the instruction that prompted this ADR assumed Docling handled both formats natively. It does not handle RTF, and routing it direct would fail every RTF file at parse time, converting a working path into a broken one.
+- *Keep ODT on Calibre for consistency* — consistency with nothing. The routing table's actual principle is "what Docling can read, Docling reads", and ODT was an unexplained exception to it.
+- *Add `odfdo` as an optional extra rather than a dependency* — ODT would then fail at parse time on a default install, which is a worse failure than the one being removed.
+
+**Consequences.** Docling's OpenDocument backend requires `odfdo`, which the base `docling` package does not install. It joins the dependency manifest at 3.24.3, Apache-2.0, whose only runtime dependency is `lxml` (BSD-3-Clause), already present. Nothing GPL-family or AGPL enters, so invariants 6 and ADR-011 are unaffected. CLAUDE.md section 5 lists the dependency manifest as ask-first; this addition is recorded here and raised rather than made quietly.
+
+ODT conversions no longer require Calibre. README already listed Calibre as needed for MOBI, AZW, AZW3, and FB2 only, so it becomes accurate rather than needing a correction.
+
+An ODT converted under the old routing is not reproducible under the new one. The output comes from the ODT rather than from Calibre's EPUB rendering of it, which is the point, but it is a change in output for identical input.
+
+Password-protected ODF is not detected by the ingestion DRM check, which reads zip flag bits and EPUB and MOBI markers. An encrypted ODT now reaches Docling and fails there with a parse error naming the file. That is loud rather than silent, so invariant 7 holds, but it is a newly reachable gap in the invariant 2 check and should be closed when ODF encryption markers are added to the inspector.
+
+**Would reverse this.** Docling dropping its OpenDocument backend, or `odfdo` relicensing to a copyleft license. RTF moves to the direct path if Docling gains an RTF backend, which needs no new decision — it is the same rule applied to a changed fact.
+
+---
+
 *Companion documents: `ARCHITECTURE.md` (what the system is), `RUNBOOK.md` (how to operate it), `SUPPORT.md` (what users are told), `DATA.md` (what is held).*

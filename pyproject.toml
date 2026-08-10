@@ -21,6 +21,9 @@ classifiers = [
 dependencies = [
     "docling>=2.118.1",
     "nvidia-ml-py>=13.610.43",
+    # Docling's OpenDocument backend. Apache-2.0; its only runtime dependency is lxml
+    # (BSD-3-Clause), already in the tree. Required for the ODT path in ADR-023.
+    "odfdo>=3.24.3",
     "ollama>=0.6.2",
     "pypdfium2>=5.12.1",
     "pywebview>=5.3",

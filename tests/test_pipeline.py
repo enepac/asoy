@@ -14,15 +14,17 @@ from asoy.assemble import count_chapter_headings, render
 from asoy.export import OutputVerificationError, write
 from asoy.orchestrator import ChapterCountMismatch, ConversionRefused, convert
 from asoy.parser import Block, BlockKind, Chapter, ParsedDocument, parse
-from asoy.router import CalibreConversionNotImplemented
+from asoy.router import CalibreConversionNotImplemented, Route
 from tests.epub_fixtures import (
     CHAPTER_ONE,
     CHAPTER_TWO,
     CONTENT_ENCRYPTION_ALGORITHM,
     FRONT_MATTER_THEN_CHAPTER,
+    ODT_TWO_CHAPTERS,
     add_encryption_xml,
     build_epub,
     build_mobi,
+    build_odt,
 )
 
 VERBATIM_SENTENCE = "It was a bright cold day in April, and the clocks were striking thirteen."
@@ -208,6 +210,20 @@ def test_text_only_epub_converts_end_to_end(two_chapter_epub: Path, tmp_path: Pa
     flattened = result.artifacts.text_path.read_text(encoding="utf-8")
     assert VERBATIM_SENTENCE in flattened
     assert not flattened.startswith("#")
+
+
+def test_text_only_odt_converts_without_calibre(tmp_path: Path) -> None:
+    """ADR-023: ODT is parsed by Docling directly, so no external program is involved."""
+    book = build_odt(tmp_path / "book.odt", ODT_TWO_CHAPTERS)
+    result = convert(book, tmp_path / "out")
+
+    assert result.decision.route is Route.DIRECT
+
+    markdown = result.artifacts.markdown_path.read_text(encoding="utf-8")
+    assert markdown.startswith("# The First Chapter")
+    assert "# The Second Chapter" in markdown
+    assert VERBATIM_SENTENCE in markdown
+    assert count_chapter_headings(markdown) == 2
 
 
 def test_no_description_delimiter_is_invented(two_chapter_epub: Path, tmp_path: Path) -> None:

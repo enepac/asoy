@@ -1,4 +1,4 @@
-"""Builders for EPUB fixtures, so the suite carries no third-party book files.
+"""Builders for book fixtures, so the suite carries no third-party book files.
 
 Everything here is generated at test time. That matters for licensing as much as for repository
 size: a real book checked into a public Apache 2.0 repository would be someone else's copyrighted
@@ -138,6 +138,51 @@ def build_mobi(path: Path, *, encryption: int) -> Path:
     return path
 
 
+_ODT_MIMETYPE = "application/vnd.oasis.opendocument.text"
+
+_ODT_MANIFEST = """<?xml version="1.0" encoding="UTF-8"?>
+<manifest:manifest
+  xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.2">
+ <manifest:file-entry manifest:full-path="/" manifest:media-type="{mimetype}"/>
+ <manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/>
+ <manifest:file-entry manifest:full-path="styles.xml" manifest:media-type="text/xml"/>
+</manifest:manifest>
+"""
+
+_ODT_CONTENT = """<?xml version="1.0" encoding="UTF-8"?>
+<office:document-content
+  xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
+  xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"
+  office:version="1.2">
+ <office:body>
+  <office:text>
+{body}
+  </office:text>
+ </office:body>
+</office:document-content>
+"""
+
+_ODT_STYLES = """<?xml version="1.0" encoding="UTF-8"?>
+<office:document-styles
+  xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
+  office:version="1.2"><office:styles/></office:document-styles>
+"""
+
+
+def build_odt(path: Path, body: str) -> Path:
+    """Build a minimal ODT. `body` is the contents of <office:text>, in ODF markup.
+
+    ADR-023 routes ODT to Docling directly, so the fixture has to be a real OpenDocument package
+    rather than something Calibre would normalise on the way in.
+    """
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("mimetype", _ODT_MIMETYPE, compress_type=zipfile.ZIP_STORED)
+        archive.writestr("META-INF/manifest.xml", _ODT_MANIFEST.format(mimetype=_ODT_MIMETYPE))
+        archive.writestr("content.xml", _ODT_CONTENT.format(body=body))
+        archive.writestr("styles.xml", _ODT_STYLES)
+    return path
+
+
 # Convenience bodies used by several tests.
 CHAPTER_ONE = """
 <h1>The First Chapter</h1>
@@ -156,4 +201,13 @@ FRONT_MATTER_THEN_CHAPTER = """
 <p>Front matter before any heading. It must not be dropped.</p>
 <h1>The Only Chapter</h1>
 <p>Body of the only chapter.</p>
+"""
+
+ODT_TWO_CHAPTERS = """
+   <text:h text:outline-level="1">The First Chapter</text:h>
+   <text:p>It was a bright cold day in April, and the clocks were striking thirteen.</text:p>
+   <text:h text:outline-level="2">A Subsection</text:h>
+   <text:p>Nested content lives here.</text:p>
+   <text:h text:outline-level="1">The Second Chapter</text:h>
+   <text:p>The second chapter says something else entirely.</text:p>
 """

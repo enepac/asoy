@@ -98,11 +98,15 @@ Inspects the input and decides the path.
 
 | Input | Path |
 |---|---|
-| EPUB, PDF, DOCX, PPTX, XLSX, HTML, images, plain text | Direct to Docling |
-| MOBI, AZW, AZW3, FB2, LIT, PDB, RTF, ODT | Calibre `ebook-convert` then EPUB then Docling |
+| EPUB, PDF, DOCX, PPTX, XLSX, HTML, ODT, images, plain text | Direct to Docling |
+| MOBI, AZW, AZW3, FB2, LIT, PDB, RTF | Calibre `ebook-convert` then EPUB then Docling |
 | DRM-protected (any format) | Rejected at ingestion |
 
+A format is on the Calibre row when Docling has no backend for it, and for no other reason. The subprocess boundary costs the user an external prerequisite and costs the book a round trip through an intermediate EPUB, so it is not a default path. ODT is read by Docling directly; RTF is not read by Docling at all. See ADR-023.
+
 Calibre is invoked as a subprocess over the command line. It is never linked, imported, or bundled — this keeps Asoy's Apache 2.0 license clear of Calibre's GPLv3. The subprocess boundary is a licensing boundary, not just a technical one, and must not be collapsed for convenience.
+
+The intermediate EPUB is written to the job's temp directory (section 7) and deleted with it. The source file is never modified.
 
 ### 4.4 Document Parser
 
@@ -195,6 +199,7 @@ Job records and logs contain file paths and block-level metadata. They contain n
 | Component | Role | License | Boundary |
 |---|---|---|---|
 | Docling | Document parsing | MIT | Library |
+| odfdo | Docling's OpenDocument backend, for ODT | Apache 2.0 | Library |
 | Calibre `ebook-convert` | Kindle and legacy formats | GPLv3 | Subprocess only |
 | RapidOCR | OCR, both tiers | Apache 2.0 | Library |
 | PyTorch | Layout and table models, via Docling | BSD | Transitive, unavoidable |

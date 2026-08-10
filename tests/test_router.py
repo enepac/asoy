@@ -23,10 +23,12 @@ from tests.epub_fixtures import (
     CHAPTER_ONE,
     CONTENT_ENCRYPTION_ALGORITHM,
     FONT_OBFUSCATION_ALGORITHM,
+    ODT_TWO_CHAPTERS,
     add_adobe_rights,
     add_encryption_xml,
     build_epub,
     build_mobi,
+    build_odt,
 )
 
 
@@ -47,6 +49,34 @@ def test_kindle_format_routes_to_calibre(tmp_path: Path) -> None:
     decision = route(book)
     assert decision.route is Route.CALIBRE
     assert decision.accepted is True
+
+
+def test_odt_routes_direct_to_docling(tmp_path: Path) -> None:
+    """ADR-023: Docling reads ODT natively, so it does not pay the Calibre boundary's cost."""
+    book = build_odt(tmp_path / "book.odt", ODT_TWO_CHAPTERS)
+    decision = route(book)
+    assert decision.route is Route.DIRECT
+    assert ".odt" not in CALIBRE_FORMATS
+
+
+def test_rtf_still_routes_to_calibre(tmp_path: Path) -> None:
+    """ADR-023: Docling 2.118.1 has no RTF backend, so RTF keeps the subprocess path."""
+    book = tmp_path / "book.rtf"
+    book.write_text(r"{\rtf1\ansi Some text.}", encoding="ascii")
+    assert route(book).route is Route.CALIBRE
+
+
+def test_docling_has_no_rtf_backend() -> None:
+    """The fact ADR-023 rests on. If this fails, RTF can move to the direct path.
+
+    Catches the routing table silently outliving its reason: the only argument for keeping RTF
+    behind a GPLv3 prerequisite is that Docling cannot read it.
+    """
+    from docling.datamodel.base_models import FormatToExtensions
+
+    extensions = {extension for group in FormatToExtensions.values() for extension in group}
+    assert "rtf" not in extensions
+    assert "odt" in extensions
 
 
 def test_unsupported_format_is_rejected(tmp_path: Path) -> None:
