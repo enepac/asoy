@@ -146,6 +146,8 @@ Anything not in this table and reproducible goes to `INCIDENTS.md` after resolut
 
 **Model updates specifically.** Never change the model a shipped version depends on without testing description quality on a fixed reference set — the same book, the same charts, compared side by side. Without a reference set this check is a vibe, and description quality is the product.
 
+**On each Docling update.** Run the full test suite before accepting it, and read `test_parse_does_not_hold_the_file_open` and `test_the_intermediate_epub_does_not_outlive_the_job` if either fails. The parser reaches into a private Docling attribute to close the source file, because nothing public does (ADR-024). A rename upstream is silent by design — the call is guarded — so those two tests are the only thing standing between an upgrade and leaked file handles.
+
 ## 10. What is not an incident
 
 Do not open an incident, and do not treat as a defect:

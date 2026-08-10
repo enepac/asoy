@@ -462,4 +462,31 @@ Password-protected ODF is not detected by the ingestion DRM check, which reads z
 
 ---
 
+## ADR-024 - The parser releases Docling's file handle through a private attribute
+
+**Date:** 2026-08-10 · **Status:** Accepted
+
+**Decision.** `asoy.parser.parse` reaches into `result.input._backend` and calls its `unload()` before returning, so the source file is closed by the time the parse completes. The call is guarded: if the attribute is absent or the call raises, the parse still succeeds.
+
+**Why.** Docling does not close the file. Its `SimplePipeline` — which serves EPUB, DOCX, ODT, and the other declarative formats — inherits the base pipeline's no-op `_unload`, and `DocumentConverter` only unloads a backend when the pipeline failed to start. So on the success path the backend's open `ZipFile` outlives the conversion and the file stays open until garbage collection happens to collect it.
+
+On Windows an open handle prevents deletion. That turns a library detail into a defect at the worst possible moment: the intermediate EPUB on the Calibre path lives in the job's temp directory, and removing that directory is the last thing a job does (ARCHITECTURE section 7). The conversion succeeded, the output was written and verified, and then cleanup raised `PermissionError`. Non-deterministically, too — whether it failed depended on whether a garbage collection had happened to run, which is the kind of intermittent failure that costs far more to diagnose than to prevent.
+
+There is no public API for this. `ConversionResult` exposes no close, no release, and no context manager, and the pipeline that would have called `unload` for us is the one that does not. The alternative to reaching for the private attribute is leaking one file handle per conversion for the life of the process, and leaving book files open is not a defensible position for an application whose stated contract is that source books are never moved, copied, or modified.
+
+**Rejected.**
+- *Rely on garbage collection* — the observed failure. CPython's refcounting closes it eventually, but "eventually" is not a guarantee the cleanup step can be written against.
+- *Delete the temp directory with `ignore_cleanup_errors=True`* — turns a visible failure into book content left in the temp directory, silently, which is worse against `DATA.md` than the error was.
+- *Copy the intermediate somewhere Asoy controls and never delete it* — same objection, plus it duplicates the user's book on disk.
+- *Force a `gc.collect()` before cleanup* — works by accident, explains nothing, and would be deleted by the next reader as superstition.
+- *Patch Docling and wait for the release* — the right long-term move and no help today. Worth doing upstream; this ADR does not depend on it landing.
+
+**Consequences.** Asoy now depends on a private attribute of a third-party library, which is exactly the kind of coupling a dependency upgrade breaks without warning. The failure mode if Docling renames or restructures `input._backend` is a silent return to the old behaviour rather than an exception, because the call is guarded — so the guard that matters is the test, not the code.
+
+**The guard.** `tests/test_pipeline.py::test_parse_does_not_hold_the_file_open` parses a book and then deletes it. On Windows that fails with `PermissionError` if the handle is still open, which is what it did before this change. `tests/test_calibre.py::test_the_intermediate_epub_does_not_outlive_the_job` covers the same defect from the other end, asserting the temp directory is gone after a Calibre-path conversion. A Docling upgrade that breaks the private access fails both. Dependency upgrades should be treated as touching this ADR.
+
+**Would reverse this.** Docling exposing a public way to release the backend — a `close()`, a context manager on `ConversionResult`, or `SimplePipeline` unloading the way `PaginatedPipeline` already does. Switch to it and delete `_release`'s reach into the private attribute the same day; the tests above will confirm the replacement works before the old code comes out.
+
+---
+
 *Companion documents: `ARCHITECTURE.md` (what the system is), `RUNBOOK.md` (how to operate it), `SUPPORT.md` (what users are told), `DATA.md` (what is held).*

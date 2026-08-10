@@ -154,10 +154,12 @@ def _release(result: object) -> None:
     breaks the removal of the job's temp directory (ARCHITECTURE section 7) on every format that
     goes through Calibre first, at the very end of a job that otherwise succeeded.
 
-    This reaches into a private attribute on purpose. There is no public release call, and the
-    alternative is holding a book file open for the life of the process. It is guarded so that a
-    change in Docling's internals degrades to the old behaviour rather than failing a good parse:
-    a leaked handle is a cleanup problem, and raising here would turn it into a lost conversion.
+    This reaches into a private attribute on purpose (ADR-024). There is no public release call,
+    and the alternative is holding a book file open for the life of the process. It is guarded so
+    that a change in Docling's internals degrades to the old behaviour rather than failing a good
+    parse: a leaked handle is a cleanup problem, and raising here would turn it into a lost
+    conversion. Because the guard hides a break, the real guard is the test —
+    `test_parse_does_not_hold_the_file_open`. Treat a Docling upgrade as touching this function.
     """
     backend = getattr(getattr(result, "input", None), "_backend", None)
     unload = getattr(backend, "unload", None)
