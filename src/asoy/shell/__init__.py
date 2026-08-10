@@ -35,6 +35,18 @@ class ShellApi:
         """Return the installed version. The frontend calls this to prove the bridge works."""
         return self._version
 
+    def get_tier(self) -> dict[str, object]:
+        """Return the detected hardware tier. Invariant 8: the active tier is always visible."""
+        from asoy.tiers import detect
+
+        result = detect()
+        return {
+            "tier": result.tier.value,
+            "device": result.device_name,
+            "vram_gib": result.total_vram_gib,
+            "reason": result.reason,
+        }
+
 
 def run_window(version: str) -> int:
     """Open the shell window and block until it closes. Returns a process exit code."""

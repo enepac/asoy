@@ -23,6 +23,11 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="print the installed version and exit without opening a window",
     )
+    parser.add_argument(
+        "--tier",
+        action="store_true",
+        help="print the detected hardware tier and exit without opening a window",
+    )
     return parser
 
 
@@ -38,6 +43,17 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.version:
         print(f"asoy {installed}")
+        return 0
+
+    if args.tier:
+        from asoy.tiers import detect
+
+        result = detect()
+        vram = result.total_vram_gib
+        print(f"Tier:   {result.tier.value}")
+        print(f"Device: {result.device_name or 'none detected'}")
+        print(f"VRAM:   {f'{vram:.2f} GiB' if vram is not None else 'not applicable'}")
+        print(f"Reason: {result.reason}")
         return 0
 
     from asoy.shell import run_window

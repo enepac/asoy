@@ -10,6 +10,7 @@
   color-scheme: light dark;
   --ok: #1a7f37;
   --bad: #b3261e;
+  --warn: #8a6d00;
   --muted: #6b6b6b;
 }
 
@@ -70,6 +71,18 @@ h1 {
 }
 
 .pending {
+  color: var(--muted);
+}
+
+.warn {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.reason {
+  max-width: 46ch;
+  margin: 1.25rem 0 0;
+  font-size: 0.8rem;
   color: var(--muted);
 }
 

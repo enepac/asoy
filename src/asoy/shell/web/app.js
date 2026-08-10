@@ -24,6 +24,19 @@
         answered = true;
         set("version", version, "ok");
         set("bridge", "reachable", "ok");
+        return window.pywebview.api.get_tier();
+      })
+      .then(function (tier) {
+        var label = tier.tier;
+        if (tier.device) {
+          label += " (" + tier.device;
+          if (tier.vram_gib) {
+            label += ", " + tier.vram_gib.toFixed(2) + " GiB";
+          }
+          label += ")";
+        }
+        set("tier", label, tier.tier === "GPU" ? "ok" : "warn");
+        set("tier-reason", tier.reason, "");
       })
       .catch(function (error) {
         answered = true;
