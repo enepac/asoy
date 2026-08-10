@@ -157,8 +157,8 @@ Detected once at startup. Reported in the UI and recorded in every job record.
 
 | Tier | Condition | OCR | Description model | Expected quality |
 |---|---|---|---|---|
-| GPU | CUDA device with 6 GB VRAM or more | RapidOCR, CUDA backend | Qwen3-VL-4B Q4 (~4 GB) | Full |
-| CPU | No CUDA device, or under 6 GB VRAM | RapidOCR, CPU backend | Moondream 2 (~2 GB) | Reduced |
+| GPU | NVIDIA device with 6 GB VRAM or more | RapidOCR, CPU backend today (see ADR-021) | Qwen3-VL-4B Q4 (~4 GB) | Full |
+| CPU | No NVIDIA device, or under 6 GB VRAM | RapidOCR, CPU backend | Moondream 2 (~2 GB) | Reduced |
 
 Tier detection queries the NVIDIA driver through NVML, not the installed inference libraries, because those report their own build configuration rather than the machine's hardware. See ADR-021.
 
