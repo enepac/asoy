@@ -168,16 +168,50 @@ _ODT_STYLES = """<?xml version="1.0" encoding="UTF-8"?>
   office:version="1.2"><office:styles/></office:document-styles>
 """
 
+# The algorithm a password-protected ODF normally declares. It names a cipher; it does not
+# perform one, and nothing in this fixture is encrypted.
+ODF_ENCRYPTION_ALGORITHM = "http://www.w3.org/2001/04/xmlenc#aes256-cbc"
 
-def build_odt(path: Path, body: str) -> Path:
+# An ODF manifest declaring content.xml as encrypted. The checksum, vector, and salt below are
+# obvious filler rather than real values: this fixture fakes the *markers* that indicate
+# protection, exactly as the EPUB and MOBI DRM fixtures do. There is no ciphertext and no key.
+_ODT_ENCRYPTED_MANIFEST = """<?xml version="1.0" encoding="UTF-8"?>
+<manifest:manifest
+  xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.2">
+ <manifest:file-entry manifest:full-path="/" manifest:media-type="{mimetype}"/>
+ <manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml">
+  <manifest:encryption-data
+    manifest:checksum-type="SHA1/1K" manifest:checksum="not-a-real-checksum">
+   <manifest:algorithm
+     manifest:algorithm-name="{algorithm}"
+     manifest:initialisation-vector="not-a-real-vector"/>
+   <manifest:key-derivation
+     manifest:key-derivation-name="PBKDF2"
+     manifest:iteration-count="100000" manifest:salt="not-a-real-salt"/>
+  </manifest:encryption-data>
+ </manifest:file-entry>
+ <manifest:file-entry manifest:full-path="styles.xml" manifest:media-type="text/xml"/>
+</manifest:manifest>
+"""
+
+
+def build_odt(path: Path, body: str, *, encrypted: bool = False) -> Path:
     """Build a minimal ODT. `body` is the contents of <office:text>, in ODF markup.
 
     ADR-023 routes ODT to Docling directly, so the fixture has to be a real OpenDocument package
     rather than something Calibre would normalise on the way in.
+
+    With `encrypted`, the manifest declares content.xml as password protected. The content itself
+    stays plain text — the point is the marker the inspector reads, not a file anybody could
+    decrypt, and this suite contains nothing that decrypts anything.
     """
+    manifest = _ODT_ENCRYPTED_MANIFEST if encrypted else _ODT_MANIFEST
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr("mimetype", _ODT_MIMETYPE, compress_type=zipfile.ZIP_STORED)
-        archive.writestr("META-INF/manifest.xml", _ODT_MANIFEST.format(mimetype=_ODT_MIMETYPE))
+        archive.writestr(
+            "META-INF/manifest.xml",
+            manifest.format(mimetype=_ODT_MIMETYPE, algorithm=ODF_ENCRYPTION_ALGORITHM),
+        )
         archive.writestr("content.xml", _ODT_CONTENT.format(body=body))
         archive.writestr("styles.xml", _ODT_STYLES)
     return path

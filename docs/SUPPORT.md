@@ -117,6 +117,8 @@ Occasionally the model fails on a block. When that happens Asoy writes an explic
 
 **Not supported:** any DRM-protected file, in any format.
 
+**Password-protected documents** are also refused, but that one you can fix: open the file in the application that made it, supply the password, and save an unprotected copy. Asoy never asks for a password and never decrypts a file, so it cannot do this step for you.
+
 ---
 
 ## Getting better results

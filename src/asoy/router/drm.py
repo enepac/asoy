@@ -11,6 +11,13 @@ One nuance worth keeping. EPUB's `META-INF/encryption.xml` is used for two unrel
 real content encryption, and the font obfuscation scheme that many unprotected books use for
 embedded typefaces. Treating every encryption.xml as DRM would reject a large number of perfectly
 convertible books, so the algorithm is inspected rather than the file's mere presence.
+
+OpenDocument has no such ambiguity. ODF records encryption inside `META-INF/manifest.xml`, as an
+`encryption-data` child of the entry it applies to, and it has no benign second use — an entry
+carrying one needs a password to read. Note that this is the user's own password rather than a
+vendor's DRM, so the finding says so and the remedy differs: the user can produce an unprotected
+copy themselves, which is not true of a DRM-protected book. Every protected finding carries its
+own remedy for exactly this reason.
 """
 
 from __future__ import annotations
@@ -34,6 +41,12 @@ FONT_OBFUSCATION_ALGORITHMS = frozenset(
 _ENCRYPTION_PATH = "META-INF/encryption.xml"
 _RIGHTS_PATH = "META-INF/rights.xml"
 
+# ODF's manifest. Shared by ODT, ODS, and ODP, and by nothing else Asoy reads.
+_ODF_MANIFEST_PATH = "META-INF/manifest.xml"
+_ODF_ENCRYPTION_ELEMENT = "encryption-data"
+_ODF_ALGORITHM_ELEMENT = "algorithm"
+_ODF_ALGORITHM_NAME_ATTRIBUTE = "algorithm-name"
+
 # PalmDB layout, used by MOBI, AZW, and PRC. The encryption flag sits at offset 12 of record 0.
 _PALMDB_NUM_RECORDS_OFFSET = 76
 _PALMDB_RECORD_INFO_OFFSET = 78
@@ -49,15 +62,31 @@ class Protection(StrEnum):
     EPUB_ADOBE_RIGHTS = "epub_adobe_rights"
     ZIP_PASSWORD = "zip_password"
     MOBI_ENCRYPTED = "mobi_encrypted"
+    ODF_ENCRYPTED = "odf_encrypted"
+
+
+# What a user can do about a protected file, which is not the same answer for every kind. A
+# vendor-DRM book cannot be unlocked by its owner; a file the owner encrypted themselves can.
+DRM_REMEDY = (
+    "Asoy cannot convert DRM-protected books, by design, and this is not a bug. "
+    "Use a copy you can already open without the vendor's reader application. "
+    "See the DRM section in SUPPORT.md."
+)
+
+PASSWORD_REMEDY = (
+    "Open the document in the application that made it, supply the password, and save an "
+    "unprotected copy for conversion. Asoy never asks for a password and never decrypts a file."
+)
 
 
 @dataclass(frozen=True)
 class DrmFinding:
-    """The outcome of one DRM inspection."""
+    """The outcome of one DRM inspection, with what the user can do about it."""
 
     protected: bool
     kind: Protection
     detail: str
+    remedy: str = ""
 
 
 _CLEAR = DrmFinding(protected=False, kind=Protection.NONE, detail="No protection detected.")
@@ -75,6 +104,63 @@ def _algorithms(encryption_xml: bytes) -> list[str]:
     return found
 
 
+def _odf_encrypted_entries(manifest_xml: bytes) -> list[tuple[str, str]]:
+    """Every (entry path, algorithm) in an ODF manifest that declares encryption-data.
+
+    Reads the manifest the same way any ODF reader reads it. Nothing here derives a key, and the
+    `key-derivation` and `start-key-generation` elements that sit alongside the algorithm are
+    deliberately not read at all.
+    """
+    root = ElementTree.fromstring(manifest_xml)
+    found: list[tuple[str, str]] = []
+
+    for entry in root.iter():
+        if entry.tag.rsplit("}", 1)[-1] != "file-entry":
+            continue
+
+        full_path = next(
+            (value for key, value in entry.attrib.items() if key.endswith("full-path")),
+            "an entry",
+        )
+        for child in entry.iter():
+            if child.tag.rsplit("}", 1)[-1] != _ODF_ENCRYPTION_ELEMENT:
+                continue
+            algorithm = "unnamed"
+            for element in child.iter():
+                if element.tag.rsplit("}", 1)[-1] != _ODF_ALGORITHM_ELEMENT:
+                    continue
+                algorithm = next(
+                    (
+                        value
+                        for key, value in element.attrib.items()
+                        if key.endswith(_ODF_ALGORITHM_NAME_ATTRIBUTE)
+                    ),
+                    algorithm,
+                )
+            found.append((full_path, algorithm))
+            break
+
+    return found
+
+
+def _inspect_odf(archive: zipfile.ZipFile) -> DrmFinding:
+    """Check an OpenDocument manifest for encrypted entries. _CLEAR if there are none."""
+    encrypted = _odf_encrypted_entries(archive.read(_ODF_MANIFEST_PATH))
+    if not encrypted:
+        return _CLEAR
+
+    entry, algorithm = encrypted[0]
+    return DrmFinding(
+        protected=True,
+        kind=Protection.ODF_ENCRYPTED,
+        detail=(
+            f"The document is password protected: {len(encrypted)} entries are encrypted, "
+            f"including {entry} (algorithm: {algorithm}). Asoy does not decrypt files."
+        ),
+        remedy=PASSWORD_REMEDY,
+    )
+
+
 def _inspect_zip(path: Path) -> DrmFinding:
     with zipfile.ZipFile(path) as archive:
         names = set(archive.namelist())
@@ -85,7 +171,15 @@ def _inspect_zip(path: Path) -> DrmFinding:
                     protected=True,
                     kind=Protection.ZIP_PASSWORD,
                     detail=f"The archive entry {info.filename} is password protected.",
+                    remedy=PASSWORD_REMEDY,
                 )
+
+        # ODF hides its encryption in the manifest rather than in a file of its own, so this has
+        # to be read to know. EPUB has no META-INF/manifest.xml, so the two never collide.
+        if _ODF_MANIFEST_PATH in names:
+            finding = _inspect_odf(archive)
+            if finding.protected:
+                return finding
 
         if _RIGHTS_PATH in names:
             return DrmFinding(
@@ -95,6 +189,7 @@ def _inspect_zip(path: Path) -> DrmFinding:
                     f"The book carries {_RIGHTS_PATH}, which indicates Adobe DRM. "
                     "Asoy does not remove DRM."
                 ),
+                remedy=DRM_REMEDY,
             )
 
         if _ENCRYPTION_PATH not in names:
@@ -113,6 +208,7 @@ def _inspect_zip(path: Path) -> DrmFinding:
                 "The book's content is encrypted "
                 f"(algorithm: {content_encryption[0]}). Asoy does not remove DRM."
             ),
+            remedy=DRM_REMEDY,
         )
 
 
@@ -145,6 +241,7 @@ def _inspect_palmdb(path: Path) -> DrmFinding:
         detail=(
             f"The file reports Mobipocket encryption type {encryption}. Asoy does not remove DRM."
         ),
+        remedy=DRM_REMEDY,
     )
 
 

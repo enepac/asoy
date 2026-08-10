@@ -23,6 +23,7 @@ from tests.epub_fixtures import (
     CHAPTER_ONE,
     CONTENT_ENCRYPTION_ALGORITHM,
     FONT_OBFUSCATION_ALGORITHM,
+    ODF_ENCRYPTION_ALGORITHM,
     ODT_TWO_CHAPTERS,
     add_adobe_rights,
     add_encryption_xml,
@@ -154,6 +155,70 @@ def test_mixed_encryption_with_any_content_algorithm_is_rejected(tmp_path: Path)
             "</enc:EncryptedData></encryption>",
         )
     assert inspect(book).protected is True
+
+
+def test_password_protected_odt_is_rejected(tmp_path: Path) -> None:
+    """Invariant 2. ODF records encryption in its manifest, not in a file of its own.
+
+    Without this the file reached Docling and failed there, which was loud but was a parse error
+    rather than a refusal — and ADR-023's move of ODT onto the direct path is what made that
+    reachable.
+    """
+    book = build_odt(tmp_path / "locked.odt", ODT_TWO_CHAPTERS, encrypted=True)
+
+    finding = inspect(book)
+    assert finding.protected is True
+    assert finding.kind is Protection.ODF_ENCRYPTED
+    assert ODF_ENCRYPTION_ALGORITHM in finding.detail
+
+    decision = route(book)
+    assert decision.route is Route.REJECTED
+    assert decision.reason is RejectionReason.DRM_PROTECTED
+
+
+def test_password_protected_odt_is_told_how_to_fix_it(tmp_path: Path) -> None:
+    """A file the owner encrypted is not a vendor's DRM, and the remedy is not the same one.
+
+    Telling someone to find a copy without DRM, when they hold the password, is a wrong answer
+    that reads like a correct one.
+    """
+    book = build_odt(tmp_path / "locked.odt", ODT_TWO_CHAPTERS, encrypted=True)
+    remedy = route(book).remedy
+
+    assert "password" in remedy.lower()
+    assert "DRM" not in remedy
+
+
+def test_unencrypted_odt_manifest_is_not_treated_as_protection(tmp_path: Path) -> None:
+    """Every ODT has a manifest. Only some declare encryption-data."""
+    book = build_odt(tmp_path / "plain.odt", ODT_TWO_CHAPTERS)
+    assert inspect(book).protected is False
+    assert route(book).route is Route.DIRECT
+
+
+def test_the_drm_inspector_imports_nothing_that_could_decrypt() -> None:
+    """Invariant 2 and ADR-014: this module detects protection and never approaches removing it.
+
+    Reading an ODF manifest puts a key-derivation function, a salt, and an iteration count in
+    front of the code. That is the moment the boundary is easiest to cross by accident, and the
+    first visible sign of crossing it would be one of these imports appearing.
+    """
+    import ast
+
+    from asoy.router import drm
+
+    forbidden = {"hashlib", "hmac", "base64", "binascii", "secrets", "ssl", "Crypto",
+                 "cryptography", "nacl", "pyaes"}
+    tree = ast.parse(Path(drm.__file__).read_text(encoding="utf-8"))
+
+    imported: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported |= {alias.name.split(".")[0] for alias in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+
+    assert not imported & forbidden, f"the DRM inspector must not import {imported & forbidden}"
 
 
 @pytest.mark.parametrize("encryption", [1, 2])

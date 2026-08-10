@@ -104,7 +104,7 @@ Inspects the input and decides the path.
 |---|---|
 | EPUB, PDF, DOCX, PPTX, XLSX, HTML, ODT, images, plain text | Direct to Docling |
 | MOBI, AZW, AZW3, FB2, LIT, PDB, RTF | Calibre `ebook-convert` then EPUB then Docling |
-| DRM-protected (any format) | Rejected at ingestion |
+| DRM-protected or encrypted (any format) | Rejected at ingestion |
 
 A format is on the Calibre row when Docling has no backend for it, and for no other reason. The subprocess boundary costs the user an external prerequisite and costs the book a round trip through an intermediate EPUB, so it is not a default path. ODT is read by Docling directly; RTF is not read by Docling at all. See ADR-023.
 
@@ -237,7 +237,8 @@ Documented here because these are where "looks finished" hides incompleteness.
 - **Ollama absent or not running** — detected at startup and before each job; actionable message, no silent hang.
 - **Model not pulled** — detected; the pull command is shown, not just named.
 - **VRAM exhausted mid-job** — detected; the job falls back to the CPU tier and the output records that it did, so a quality drop is never unexplained.
-- **DRM-protected input** — rejected at ingestion with an explanation of why, and no partial output.
+- **DRM-protected input** — rejected at ingestion with an explanation of why, and no partial output. The check covers EPUB content encryption and Adobe rights markers, the Mobipocket encryption flag, password-protected zip entries, and OpenDocument entries declaring `encryption-data` in their manifest. It reads markers only; nothing in it decrypts, and nothing in it may be extended to.
+- **Password-protected input** — refused the same way, but told apart from vendor DRM in the message. A file its owner encrypted can be re-saved unprotected, which a DRM-protected book cannot, so the remedy travels with the finding rather than being one fixed sentence.
 - **Corrupt or malformed source file** — job fails with the file named; other queued jobs continue.
 - **Calibre not installed** — the job fails at the point the format needs it, naming the download and the override variable. There is no in-process fallback, because there is nothing to fall back to.
 - **Calibre subprocess failure** — captured with its stderr, surfaced to the user, not swallowed. Its stdout is shown instead when stderr is empty.

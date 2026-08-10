@@ -70,6 +70,8 @@ class RejectionReason(StrEnum):
     """Why an input was refused. NONE when it was not."""
 
     NONE = "none"
+    # Covers every kind of protection the inspector finds, vendor DRM and the user's own
+    # password alike. The finding's `kind` distinguishes them; its remedy is what differs.
     DRM_PROTECTED = "drm_protected"
     UNSUPPORTED_FORMAT = "unsupported_format"
     MISSING = "missing"
@@ -141,16 +143,9 @@ def route(path: Path) -> RoutingDecision:
         )
 
     if finding.protected:
-        return _reject(
-            suffix,
-            RejectionReason.DRM_PROTECTED,
-            finding.detail,
-            (
-                "Asoy cannot convert DRM-protected books, by design, and this is not a bug. "
-                "Use a copy you can already open without the vendor's reader application. "
-                "See the DRM section in SUPPORT.md."
-            ),
-        )
+        # The remedy comes from the finding, because it is not the same answer for every kind:
+        # a vendor-DRM book cannot be unlocked by its owner, a file they encrypted themselves can.
+        return _reject(suffix, RejectionReason.DRM_PROTECTED, finding.detail, finding.remedy)
 
     if suffix in CALIBRE_FORMATS:
         return RoutingDecision(
