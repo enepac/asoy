@@ -1,23 +1,80 @@
-/* Placeholder styling. Enough to prove the pywebview window renders. */
+/* Placeholder styling. Enough to prove WebView2 rendered the packaged assets. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 :root {
   color-scheme: light dark;
+  --ok: #1a7f37;
+  --bad: #b3261e;
+  --muted: #6b6b6b;
 }
 
 body {
   margin: 0;
   font-family: "Segoe UI", system-ui, sans-serif;
+  line-height: 1.5;
 }
 
 main {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  padding: 2rem;
+  text-align: center;
 }
 
 h1 {
-  font-size: 3rem;
+  margin: 0;
+  font-size: 3.5rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+
+.tagline {
+  margin: 0.25rem 0 2rem;
+  color: var(--muted);
+}
+
+.status {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.35rem 1rem;
+  margin: 0;
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.status dt {
+  color: var(--muted);
+}
+
+.status dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.ok {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.bad {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.pending {
+  color: var(--muted);
+}
+
+.note {
+  margin-top: 2.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
