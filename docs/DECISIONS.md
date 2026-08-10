@@ -409,4 +409,26 @@ That divergence is not a development-machine quirk. Every user installing Asoy t
 
 ---
 
+## ADR-022 - The assembler builds Markdown from raw text, not from Docling's exporter
+
+**Date:** 2026-08-10 · **Status:** Accepted
+
+**Decision.** The parser carries each item's raw text and the assembler composes the Markdown itself. It does not call Docling's `export_to_markdown()`.
+
+**Why.** Invariant 3. Docling's exporter escapes some Markdown metacharacters and not others: a passage containing `_word_` comes back as `\_word\_`, while `*word*` is passed through untouched. Neither behaviour is wrong for a general exporter, but the pair is inconsistent, and both are decisions about the author's characters that Asoy has not made.
+
+The inconsistency is the part that matters. Escaping everything would at least be reversible. Escaping half means one emphasis marker survives into the output as literal backslashes a naive consumer will read aloud, and the other silently becomes emphasis. Author text has to be one thing or the other, chosen deliberately, and the exporter chooses for us.
+
+Composing the Markdown ourselves also keeps the structural characters countable. The only characters Asoy adds are the `#` of a heading and the blank line between blocks, which is what makes the parse-to-emit chapter assertion meaningful.
+
+**Rejected.**
+- *Call `export_to_markdown()` and post-process* - unescaping someone else's escaping is guesswork the moment the author writes a real backslash.
+- *Escape everything ourselves* - defensible, and it is the obvious future change, but it is an output-contract decision that belongs with the delimiter work in ADR-006 rather than being settled by a parser convenience.
+
+**Consequences.** Author text is emitted with no escaping at all today. A paragraph that legitimately begins with `#` or `>` will be read as structure by a strict Markdown parser. This is a known, unhandled edge and is not yet decided; it should be settled alongside the delimiter, since both concern how the output distinguishes Asoy's characters from the author's.
+
+**Would reverse this.** Docling gaining a documented, consistent no-escape or full-escape mode, or the delimiter work settling on an escaping policy that the assembler should apply uniformly.
+
+---
+
 *Companion documents: `ARCHITECTURE.md` (what the system is), `RUNBOOK.md` (how to operate it), `SUPPORT.md` (what users are told), `DATA.md` (what is held).*
