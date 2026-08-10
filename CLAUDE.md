@@ -114,6 +114,7 @@ UI framework: `pywebview` (BSD, WebView2 backend on Windows) · Language: `Pytho
 5. **Update the affected documentation in the same commit.**
 6. **Test on both tiers** where tier-dependent, and on a clean machine where install-dependent.
 7. **If you could not complete something, say so explicitly.** An honest gap list beats a silent omission, and "should work" is never reported as "works."
+8. **End the report with a DECISIONS NEEDED section, or state that it is empty.** It lists anything touching a §3 invariant, anything on the §5 ask-first list, anything contradicting a recorded ADR, and any ambiguity the specification did not settle. One line each. Everything else is implementation and stays in Claude Code.
 
 ## 9. Mistakes to avoid here specifically
 
