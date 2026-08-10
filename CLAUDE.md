@@ -99,7 +99,7 @@ Tests:        uv run pytest
 Lint:         uv run ruff check .
 Format:       uv run ruff format .
 Build wheel:  uv build
-License scan: [LICENSE SCAN COMMAND]
+License scan: uv run pip-licenses --format=markdown
 Package:      [PACKAGE COMMAND]
 ```
 
