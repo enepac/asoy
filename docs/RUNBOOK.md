@@ -65,6 +65,23 @@ Do these in order. Do not skip the verification steps because the change was sma
 
 **Do not publish the manifest first.** Users will be offered an installer that is not yet attached.
 
+### Outstanding manual verification
+
+**These have never been run. They are not release steps yet, because they cannot be performed on the development machine as it currently stands. Each names what is missing. Do the check the first time the machine can, then move the step into the numbered procedure above and delete it from here.**
+
+**The Calibre subprocess path, end to end against the real program.** Blocked on: Calibre is not installed on the development machine. Everything about this path is currently verified against a generated stand-in that mimics `ebook-convert`'s exit codes and output, which exercises Asoy's handling and proves nothing about the real command's behaviour.
+
+When Calibre is available:
+
+1. Install Calibre. Do not add it to PATH — the point of step 3 is that Asoy finds it anyway.
+2. Convert a real MOBI or AZW3 end to end: `asoy convert <book> -o <dir>`.
+3. Confirm Asoy located `ebook-convert` without `ASOY_EBOOK_CONVERT` being set, through the standard install directories.
+4. Confirm the `.md` and `.txt` are written and the chapter count matches the book.
+5. **Confirm the intermediate EPUB is cleaned up.** The per-job temp directory is `%TEMP%\asoy-job-*`. There must be none left after the job. This is the check that matters most: it is the one that failed during development, it failed only at the very end of a conversion that had otherwise succeeded, and it failed intermittently. See ADR-024.
+6. Break it deliberately once. Convert a truncated or corrupt MOBI and confirm Calibre's own stderr appears in the message rather than a generic failure.
+
+If any step fails, that is an incident with a real cause, not a stand-in artifact. Write it up.
+
 ## 4. Rollback
 
 Rollback for a desktop app is not instant — users who already updated have the bad version on their machines. Speed matters because it caps how many more get it.
