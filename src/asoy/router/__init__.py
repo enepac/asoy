@@ -5,8 +5,10 @@ first, or rejected. It performs the DRM check that invariant 2 requires at inges
 
 **The Calibre boundary is a licensing boundary, not a convenience.** Calibre is GPLv3 and Asoy is
 Apache 2.0; the command-line subprocess is what keeps those compatible (ADR-010, invariant 5).
-This module names the Calibre path but does not invoke it, and when it is implemented it must be
-invoked as a subprocess. Importing, linking, or vendoring Calibre relicenses the whole project.
+This module decides which files take that path; `asoy.router.ebook_convert` runs it, and runs it
+only as a separate program. Linking or vendoring Calibre relicenses the whole project.
+
+A format sits on the Calibre path only when Docling has no backend for it (ADR-023).
 """
 
 from __future__ import annotations
@@ -87,14 +89,6 @@ class RoutingDecision:
     @property
     def accepted(self) -> bool:
         return self.route is not Route.REJECTED
-
-
-class CalibreConversionNotImplemented(NotImplementedError):
-    """Raised when a file needs Calibre, which is not wired up yet.
-
-    Deliberately loud. Silently producing an empty or partial conversion for a Kindle book would
-    look like success, and CLAUDE.md section 6 requires failures to be surfaced, never swallowed.
-    """
 
 
 def _reject(

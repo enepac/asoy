@@ -145,8 +145,34 @@ def _to_blocks_and_chapters(items: list[tuple[str, str, int]]) -> tuple[Chapter,
     return tuple(chapters)
 
 
+def _release(result: object) -> None:
+    """Close Docling's handle on the file it just read.
+
+    Docling's SimplePipeline — which serves EPUB, DOCX, ODT, and the other declarative formats —
+    inherits a no-op unload, so the backend's open ZipFile survives the call and the source stays
+    open until garbage collection gets to it. On Windows an open handle prevents deletion, which
+    breaks the removal of the job's temp directory (ARCHITECTURE section 7) on every format that
+    goes through Calibre first, at the very end of a job that otherwise succeeded.
+
+    This reaches into a private attribute on purpose. There is no public release call, and the
+    alternative is holding a book file open for the life of the process. It is guarded so that a
+    change in Docling's internals degrades to the old behaviour rather than failing a good parse:
+    a leaked handle is a cleanup problem, and raising here would turn it into a lost conversion.
+    """
+    backend = getattr(getattr(result, "input", None), "_backend", None)
+    unload = getattr(backend, "unload", None)
+    if callable(unload):
+        try:
+            unload()
+        except Exception:  # noqa: BLE001 - see above; there is nothing here to report to a user
+            pass
+
+
 def parse(path: Path) -> ParsedDocument:
-    """Parse a document into chapters. Raises ParseError if Docling cannot read it."""
+    """Parse a document into chapters. Raises ParseError if Docling cannot read it.
+
+    The file is not held open after this returns. See `_release`.
+    """
     from docling.document_converter import DocumentConverter
 
     try:
@@ -154,6 +180,14 @@ def parse(path: Path) -> ParsedDocument:
     except Exception as exc:
         raise ParseError(f"Docling failed to convert {path}: {type(exc).__name__}: {exc}") from exc
 
+    try:
+        return _extract(path, result)
+    finally:
+        _release(result)
+
+
+def _extract(path: Path, result: object) -> ParsedDocument:
+    """Turn one Docling conversion result into a ParsedDocument."""
     status = str(getattr(result.status, "value", result.status)).lower()
     if status not in {"success", "partial_success"}:
         errors = "; ".join(str(e) for e in getattr(result, "errors", []) or []) or "no detail"

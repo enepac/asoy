@@ -141,7 +141,7 @@ Occasionally the model fails on a block. When that happens Asoy writes an explic
 | Text garbled or missing | Scanned source, poor recognition | Check flagged pages in the review screen |
 | Chapters out of order | Complex PDF layout | Use an EPUB if one exists |
 | Vague chart descriptions | CPU tier, or a dense chart | Check your tier first |
-| MOBI or AZW3 will not convert | Calibre missing, or the file has DRM | Install Calibre; check whether the file is protected |
+| MOBI or AZW3 will not convert | Calibre missing, or the file has DRM | Install Calibre; check whether the file is protected. If Calibre is installed but Asoy cannot find it, set `ASOY_EBOOK_CONVERT` to the full path of `ebook-convert.exe` |
 | File rejected immediately | DRM, or a corrupt file | Read the message shown; DRM files cannot be converted |
 
 ---

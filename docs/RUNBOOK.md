@@ -130,7 +130,7 @@ Standard opening set. Ask for all of it at once; a five-round back-and-forth was
 | Chapters out of order | Reading-order error in a complex layout | Parser limitation, not a bug in Asoy. Confirm source is PDF; suggest EPUB if available |
 | Descriptions vague or wrong on charts | Expected on CPU tier, possible on GPU tier | Documented limitation. Confirm tier before treating as a defect |
 | File rejected at ingestion | DRM, or corrupt file | Check the rejection message; DRM is a boundary, not a bug |
-| MOBI/AZW3 fails to convert | Calibre missing or subprocess failed | Check Calibre is installed and on PATH; read the captured stderr |
+| MOBI/AZW3 fails to convert | Calibre missing or subprocess failed | Read the message: it says which. If Calibre is installed somewhere unusual, set `ASOY_EBOOK_CONVERT` to the full path of `ebook-convert.exe`. Otherwise read the captured stderr |
 | Job resumes at the wrong place | Checkpoint state invalid after source file changed | Clear job state and restart the conversion |
 | Empty output file | Job failed silently — this should not happen | Escalate. Silent failure is a defect regardless of cause |
 

@@ -1,7 +1,11 @@
 """Conversion Orchestrator: job state machine and checkpoints (ARCHITECTURE section 4.2).
 
-Currently the minimum path: route, parse, assemble, export, for a text-only document. Checkpoint
-and resume (ADR-015) are not implemented yet.
+Currently the minimum path: route, convert if the format needs Calibre, parse, assemble, export,
+for a text-only document. Checkpoint and resume (ADR-015) are not implemented yet.
+
+Formats on the Calibre row of the routing table are converted to an EPUB inside a per-job temp
+directory, which is removed when the job ends either way (ARCHITECTURE section 7). The user's
+source file is never moved, copied over, or modified.
 
 Two refusals here are deliberate and must not be softened into warnings:
 
@@ -17,11 +21,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from asoy.assemble import count_chapter_headings, render
 from asoy.export import WrittenArtifacts, write
 from asoy.parser import ParsedDocument, parse
-from asoy.router import CalibreConversionNotImplemented, Route, RoutingDecision, route
+from asoy.router import Route, RoutingDecision, route
+from asoy.router.ebook_convert import convert_to_epub
+
+# Working files live here for the life of the job and no longer (ARCHITECTURE section 7).
+TEMP_PREFIX = "asoy-job-"
 
 
 class ConversionRefused(RuntimeError):
@@ -43,6 +52,9 @@ class ConversionResult:
     decision: RoutingDecision
     document: ParsedDocument
     artifacts: WrittenArtifacts
+    # The intermediate EPUB Calibre produced, for the job record. None on the direct path. The
+    # path itself no longer exists by the time this is returned; the temp directory is gone.
+    intermediate: Path | None = None
 
 
 def _assert_chapter_counts(document: ParsedDocument, markdown: str, rendered_count: int) -> None:
@@ -68,12 +80,18 @@ def convert(source: Path, output_dir: Path) -> ConversionResult:
         raise ConversionRefused(decision.detail, decision.remedy)
 
     if decision.route is Route.CALIBRE:
-        raise CalibreConversionNotImplemented(
-            f"{decision.suffix} requires Calibre, which is not wired up yet. "
-            "Calibre must be invoked as a subprocess when it is (ADR-010, invariant 5)."
-        )
+        with TemporaryDirectory(prefix=TEMP_PREFIX) as work_dir:
+            intermediate = convert_to_epub(source, Path(work_dir) / f"{source.stem}.epub")
+            return _parse_and_write(source, decision, intermediate, output_dir)
 
-    document = parse(source)
+    return _parse_and_write(source, decision, source, output_dir)
+
+
+def _parse_and_write(
+    source: Path, decision: RoutingDecision, parse_target: Path, output_dir: Path
+) -> ConversionResult:
+    """Parse, assemble, and export. `parse_target` differs from `source` on the Calibre path."""
+    document = parse(parse_target)
 
     if document.undescribed:
         kinds = ", ".join(sorted({block.kind for block in document.undescribed}))
@@ -88,5 +106,9 @@ def convert(source: Path, output_dir: Path) -> ConversionResult:
 
     artifacts = write(rendered, output_dir, source.stem)
     return ConversionResult(
-        source=source, decision=decision, document=document, artifacts=artifacts
+        source=source,
+        decision=decision,
+        document=document,
+        artifacts=artifacts,
+        intermediate=None if parse_target == source else parse_target,
     )

@@ -62,8 +62,9 @@ the convention above. It becomes dated when the release actually ships.
 
 ### Added
 
-- Conversion of EPUB, PDF, DOCX, PPTX, XLSX, HTML, images, and plain text into text prepared for audiobook narration.
-- Conversion of MOBI, AZW, AZW3, FB2, and other legacy ebook formats, via Calibre where it is installed.
+- Conversion of EPUB, PDF, DOCX, ODT, PPTX, XLSX, HTML, images, and plain text into text prepared for audiobook narration.
+- Conversion of MOBI, AZW, AZW3, FB2, RTF, and other legacy ebook formats, via Calibre where it is installed.
+- An `asoy convert <book>` command for converting one book from a terminal, without opening the window.
 - Narrative descriptions of non-text content — photographs, illustrations, tables, diagrams, and charts — placed in correct reading order rather than skipped.
 - Optical character recognition for scanned books and image-only PDFs.
 - Two hardware tiers, detected automatically: a GPU tier for cards with 6 GB of video memory or more, and a CPU fallback. The active tier is shown in the interface and recorded with each job.

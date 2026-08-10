@@ -14,7 +14,8 @@ from asoy.assemble import count_chapter_headings, render
 from asoy.export import OutputVerificationError, write
 from asoy.orchestrator import ChapterCountMismatch, ConversionRefused, convert
 from asoy.parser import Block, BlockKind, Chapter, ParsedDocument, parse
-from asoy.router import CalibreConversionNotImplemented, Route
+from asoy.router import Route
+from asoy.router.ebook_convert import PATH_ENV_VAR, CalibreNotFound
 from tests.epub_fixtures import (
     CHAPTER_ONE,
     CHAPTER_TWO,
@@ -105,6 +106,20 @@ def test_front_matter_before_the_first_heading_is_kept(tmp_path: Path) -> None:
     front_text = [b.text for b in document.chapters[0].blocks]
     assert "Front matter before any heading. It must not be dropped." in front_text
     assert document.titled_chapter_count == 1
+
+
+def test_parse_does_not_hold_the_file_open(tmp_path: Path) -> None:
+    """The source must be closed by the time parse returns.
+
+    Docling's SimplePipeline leaves its backend loaded, so the ZipFile stays open until garbage
+    collection. On Windows that blocks deletion, which breaks the removal of a job's temp
+    directory at the very end of a conversion that otherwise succeeded — the worst moment for it.
+    Deleting the file here is the cheapest way to observe the handle.
+    """
+    book = build_epub(tmp_path / "closeable.epub", [("ch1", CHAPTER_ONE)])
+    parse(book)
+    book.unlink()
+    assert not book.exists()
 
 
 def test_parse_reports_a_missing_file_rather_than_returning_empty(tmp_path: Path) -> None:
@@ -266,11 +281,23 @@ def test_drm_protected_book_is_refused_end_to_end(tmp_path: Path) -> None:
     assert not (tmp_path / "out").exists(), "nothing may be written for a refused book"
 
 
-def test_calibre_path_fails_loudly_rather_than_silently(tmp_path: Path) -> None:
-    """Invariant 5. Not implemented is reported, never approximated."""
+def test_calibre_path_fails_loudly_rather_than_silently(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Invariant 5. A Kindle book without Calibre is reported, never approximated.
+
+    The rest of the Calibre path lives in test_calibre.py. This one stays here because it guards
+    the orchestrator's contract: nothing is written when the conversion cannot happen.
+    """
+    monkeypatch.setenv(PATH_ENV_VAR, str(tmp_path / "no-calibre-here.exe"))
+    monkeypatch.setattr("asoy.router.ebook_convert.INSTALL_DIRS", ())
+    monkeypatch.setattr("shutil.which", lambda _name: None)
+
     book = build_mobi(tmp_path / "book.azw3", encryption=0)
-    with pytest.raises(CalibreConversionNotImplemented):
+    with pytest.raises(CalibreNotFound):
         convert(book, tmp_path / "out")
+
+    assert not (tmp_path / "out").exists()
 
 
 def test_document_with_images_is_refused_rather_than_silently_stripped(tmp_path: Path) -> None:

@@ -86,6 +86,8 @@ The shell and the pipeline run in one process, so progress and cancellation are 
 
 Responsible for the first-run environment check (section 6) and for surfacing which hardware tier a job ran on, since that determines the quality the user should expect.
 
+The orchestrator is also reachable without a window: `asoy convert <book> [-o <dir>]` runs one conversion and exits. This is not a second product surface — it holds no logic of its own and calls the same orchestrator the shell calls. It exists so the pipeline can be exercised, scripted, and reported on from a terminal. Like the shell, it prints the active tier before the job runs (invariant 8), and every failure it reports carries its remedy.
+
 ### 4.2 Conversion Orchestrator
 
 The state machine for a conversion job. Detects the hardware tier once at startup, routes each input through the pipeline, tracks per-block progress, handles cancellation, and writes the job record used by the review UI and by support diagnostics.
@@ -172,11 +174,13 @@ No tier above GPU is shipped. A 12 GB-class tier running an 8B model would produ
 
 ## 6. Environment dependencies
 
-Two components are expected on the machine rather than shipped inside the application.
+Three components are expected on the machine rather than shipped inside the application. Two are needed always; the third only for the formats on the Calibre row of section 4.3.
 
 **Ollama** is a prerequisite, not a bundled component. The installer does not ship it, and Asoy does not manage its lifecycle.
 
 **WebView2 Runtime** renders the interface. It is present by default on Windows 11 and on current Windows 10, and absent on older builds. Unlike Ollama it is redistributable, so the installer carries the evergreen bootstrapper and installs it silently when missing. The user is never asked to fetch it.
+
+**Calibre** is required only for MOBI, AZW, AZW3, FB2, LIT, PDB, and RTF, and is not checked at startup — a user who never opens a Kindle file never needs it. It is located when one of those formats is converted: `ASOY_EBOOK_CONVERT` if set, then `ebook-convert` on PATH, then the standard Windows install directories, since Calibre's installer does not add itself to PATH. If it is not found, the job fails with the download link and the variable to set. It is never bundled and never loaded into the process (ADR-010).
 
 On first run, Asoy verifies in order: Ollama is installed; Ollama is reachable on its local port; the required model is pulled. Each failure produces a specific, actionable message and a link, not a generic error. This check re-runs at every startup, because users uninstall things.
 
@@ -233,7 +237,9 @@ Documented here because these are where "looks finished" hides incompleteness.
 - **VRAM exhausted mid-job** — detected; the job falls back to the CPU tier and the output records that it did, so a quality drop is never unexplained.
 - **DRM-protected input** — rejected at ingestion with an explanation of why, and no partial output.
 - **Corrupt or malformed source file** — job fails with the file named; other queued jobs continue.
-- **Calibre subprocess failure** — captured with its stderr, surfaced to the user, not swallowed.
+- **Calibre not installed** — the job fails at the point the format needs it, naming the download and the override variable. There is no in-process fallback, because there is nothing to fall back to.
+- **Calibre subprocess failure** — captured with its stderr, surfaced to the user, not swallowed. Its stdout is shown instead when stderr is empty.
+- **Calibre reports success and writes nothing** — treated as a failure. An empty or absent intermediate would otherwise parse as a book with no chapters, which is the shape a successful conversion of a very short book also has.
 - **OCR below confidence floor** — page flagged, emitted with a marker, listed in the review UI.
 - **Model returns an empty or degenerate description** — block retried once, then emitted as an explicit placeholder rather than as silence, because silence in an audiobook is indistinguishable from the content not existing.
 - **Disk exhaustion during a large job** — detected before writing; job pauses rather than producing a truncated file.
