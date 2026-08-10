@@ -264,4 +264,4 @@ Stated here so they are not rediscovered as bugs.
 
 ---
 
-*Companion documents: `DECISIONS.md` (why the system is shaped this way), `RUNBOOK.md` (how to operate and release it), `SUPPORT.md` (stated limitations for users), `DATA.md` (what is held and where).*
+*Companion documents: `STATE.md` (which of the above actually exists today), `DECISIONS.md` (why the system is shaped this way), `RUNBOOK.md` (how to operate and release it), `SUPPORT.md` (stated limitations for users), `DATA.md` (what is held and where).*

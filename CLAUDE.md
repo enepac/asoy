@@ -21,6 +21,7 @@ The name is Cebuano and Hiligaynon for *narrate*, and in Hiligaynon also *to exp
 
 | File | When you need it |
 |---|---|
+| `docs/STATE.md` | **Start here.** Where the build stands: what works, what is half-built, what is not started, and the next move |
 | `docs/ARCHITECTURE.md` | What each component does and where data lives |
 | `docs/DECISIONS.md` | Why something is the way it is. **Check here before proposing a change that looks obviously better** — it may already be a settled decision with a recorded reversal condition |
 | `docs/RUNBOOK.md` | Release, rollback, and triage procedures |
@@ -84,6 +85,7 @@ Not forbidden — but they were decided deliberately, and a session that changes
 Match what is here rather than importing habits from elsewhere.
 
 - **Documentation is updated in the same commit as the change.** `docs/ARCHITECTURE.md` describes the system as-built; if your change makes it wrong, fixing it is part of your change, not a follow-up.
+- **`docs/STATE.md` is regenerated in the same commit whenever a component lands, an ADR is added, or a gap opens or closes.** It is the one file a fresh session reads to answer "where are we", so a stale one is worse than none — it will be believed. Regenerate it by running the commands it cites, not by editing the lines you think changed; every claim in it is verified or labelled unverified, and a line carried forward untested stops being either. Name the change in the DECISIONS NEEDED block so it is reviewable.
 - **Decisions get an ADR.** Anything a future maintainer would question belongs in `docs/DECISIONS.md` with its rejected alternatives and reversal condition.
 - **Errors are surfaced, never swallowed.** Subprocess stderr is captured and shown. A silent failure is a defect independent of its cause.
 - **Failure paths are written alongside the happy path**, not after. The unhappy path is where "looks finished" hides.

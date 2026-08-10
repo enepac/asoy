@@ -36,10 +36,11 @@ The chat surface cannot see your files. Every fact it asserts about them is from
 
 ## 1. The Ship Set
 
-Eight documents. Written before the build, maintained during it, and read by every AI session afterward.
+Nine documents. Eight are written before the build and maintained during it. The ninth cannot exist until there is a build to describe, and is added the moment there is.
 
 | Document | What it does | Who reads it |
 |---|---|---|
+| `STATE.md` | Snapshot of where the build stands, every claim verified by a command | Any session starting cold, including you after a break |
 | `ARCHITECTURE.md` | Components, data flow, where data lives, failure surfaces, known limitations | You, future maintainers, AI sessions |
 | `DECISIONS.md` | Every decision as an ADR with rejected alternatives and a reversal condition | Anyone about to re-litigate a settled question |
 | `RUNBOOK.md` | Release, rollback, recurring obligations, triage | You, under pressure, at an inconvenient hour |
@@ -60,6 +61,10 @@ Eight documents. Written before the build, maintained during it, and read by eve
 **Explaining why in `SUPPORT.md`.** A bare "not supported" invites argument. "This is a limitation of open-source OCR generally, and cloud services do better, and we do not use them because nothing leaves your machine" ends the conversation and reinforces the product's premise in the same breath.
 
 **A standing pre-mortem in `INCIDENTS.md`.** An empty incident log is useless. Fill it with the failures most likely to arrive first, each paired with the guard that would catch it. It is forecasting, labelled as forecasting, and it means the first real incident is recognised rather than diagnosed from zero.
+
+**`STATE.md`, once code exists.** The other eight describe the system as it will be. None of them answers "what actually runs today", and reconstructing that from nine documents and a commit log is the first ten minutes of every cold session. One file, under a hundred lines: version and commit, what works with the command that proves each claim, what is half-built and what specifically is missing, what has not started, the open gaps, and the single next move.
+
+Two rules make it worth having. **Every claim is verified by a command run while writing it**, so it is a report rather than a recollection — anything unverifiable says so in the file, because a confident snapshot that is wrong is worse than one admitting a hole. And **it is regenerated in the same commit as the change**, by re-running the commands rather than editing the lines you think moved. A stale `STATE.md` is the most dangerous document in the set, because it is the one a session trusts without checking.
 
 ### One correction the Asoy build forced
 
