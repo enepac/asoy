@@ -1,0 +1,59 @@
+# Code signing material must never be committed. See docs/RUNBOOK.md §1.
+# This repository is public. A committed key is scraped within minutes, and
+# deleting the commit does not unleak it: the certificate must be revoked and
+# reissued instead. Keep signing material outside the working tree entirely.
+*.pfx
+*.p12
+*.pem
+*.key
+*.snk
+signing/
+
+# Secrets and environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build and installer output
+*.exe
+*.msi
+*.msix
+*.appx
+*.spec
+installer/output/
+release/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS (contributors may use it even though Asoy targets Windows)
+.DS_Store
+
+# Local job and scratch data
+*.log
+tmp/
+scratch/
