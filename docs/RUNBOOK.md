@@ -138,7 +138,7 @@ Anything not in this table and reproducible goes to `INCIDENTS.md` after resolut
 
 ## 9. Dependency updates
 
-**Monthly, security.** Check advisories for Docling, PaddleOCR, Tesseract, pypdfium2, and the packaging toolchain. Anything with a known exploit path gets an out-of-cycle release.
+**Monthly, security.** Check advisories for Docling, RapidOCR, PyTorch, pypdfium2, pywebview, and the packaging toolchain. Anything with a known exploit path gets an out-of-cycle release. Note that Docling pulls in a large transitive ML stack, so the scan is against the resolved tree in `uv.lock`, not against the named components alone.
 
 **Quarterly, licensing.** Re-run the license scan across the full transitive tree. You are looking for one thing above all: **has anything pulled in PyMuPDF or another AGPL package?** This is prohibited per `DECISIONS.md` ADR-011, and it enters through transitive dependencies, not direct ones. This check belongs in CI; until it is there, do it by hand and treat that as debt.
 

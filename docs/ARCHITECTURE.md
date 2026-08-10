@@ -55,8 +55,8 @@ These are architectural commitments, not preferences. Changing any of them is a 
                                      |                  +---------v---------+
                            +---------v---------+        |   Description     |
                            |    OCR Layer      |        |    Generator      |
-                           | Tesseract (CPU)   |        |  Qwen3-VL-4B via  |
-                           | PaddleOCR (GPU)   |        |      Ollama       |
+                           | RapidOCR (ONNX)   |        |  Qwen3-VL-4B via  |
+                           | CPU and GPU tiers |        |      Ollama       |
                            +---------+---------+        +---------+---------+
                                      |                            |
                                      +-------------+--------------+
@@ -114,8 +114,12 @@ Headings become Markdown headings and are the basis for chapter segmentation in 
 
 Engaged when a page carries no extractable text layer — scanned books, photographed pages, image-only PDFs.
 
-- **CPU tier:** Tesseract.
-- **GPU tier:** PaddleOCR.
+Both tiers run **RapidOCR**, which executes the PP-OCR model family through a selectable inference backend. The tier changes the backend, not the engine:
+
+- **CPU tier:** ONNX Runtime on CPU.
+- **GPU tier:** ONNX Runtime with CUDA, falling back to CPU if the device is unavailable.
+
+One engine across both tiers means OCR output differs by speed rather than by model, so a page that reads correctly on one tier reads correctly on the other. See ADR-019.
 
 Pages that produce OCR output below the confidence floor are flagged in the job record and marked in the review UI rather than silently emitted. Handwritten content is not reliably recognised by either engine; this is a known limitation, documented in `SUPPORT.md`, not a defect to be filed.
 
@@ -153,8 +157,8 @@ Detected once at startup. Reported in the UI and recorded in every job record.
 
 | Tier | Condition | OCR | Description model | Expected quality |
 |---|---|---|---|---|
-| GPU | CUDA device with 6 GB VRAM or more | PaddleOCR | Qwen3-VL-4B Q4 (~4 GB) | Full |
-| CPU | No CUDA device, or under 6 GB VRAM | Tesseract | Moondream 2 (~2 GB) | Reduced |
+| GPU | CUDA device with 6 GB VRAM or more | RapidOCR, CUDA backend | Qwen3-VL-4B Q4 (~4 GB) | Full |
+| CPU | No CUDA device, or under 6 GB VRAM | RapidOCR, CPU backend | Moondream 2 (~2 GB) | Reduced |
 
 **The quality difference is real and must be stated to the user, not hidden.** On the CPU tier, charts are described qualitatively — the shape and direction of the data — rather than numerically. Specific values are frequently missed. Photographs and illustrations degrade far less.
 
@@ -190,14 +194,16 @@ Job records and logs contain file paths and block-level metadata. They contain n
 |---|---|---|---|
 | Docling | Document parsing | MIT | Library |
 | Calibre `ebook-convert` | Kindle and legacy formats | GPLv3 | Subprocess only |
-| Tesseract | OCR, CPU tier | Apache 2.0 | Library |
-| PaddleOCR | OCR, GPU tier | Apache 2.0 | Library |
+| RapidOCR | OCR, both tiers | Apache 2.0 | Library |
+| PyTorch | Layout and table models, via Docling | BSD | Transitive, unavoidable |
 | Qwen3-VL-4B | Descriptions, GPU tier | Apache 2.0 | Via Ollama |
 | Moondream 2 | Descriptions, CPU tier | Apache 2.0 | Via Ollama |
 | Ollama | Model runtime | MIT | Local HTTP, user-installed |
 | pypdfium2 | PDF rendering | BSD/Apache | Library |
 | pywebview | Desktop shell | BSD | Library |
 | WebView2 Runtime | Frontend rendering, Windows | Microsoft, redistributable | System component |
+
+This table lists the components Asoy depends on by name and by decision. It is not the full dependency tree, which runs to roughly 120 packages once Docling's model stack is resolved. The tree is what the quarterly license audit scans; this table is what the architecture commits to.
 
 **PyMuPDF is prohibited.** It is AGPL and would relicense the application. If a transitive dependency pulls it in, that dependency is replaced, not accepted. This has caught other projects in this exact problem space.
 

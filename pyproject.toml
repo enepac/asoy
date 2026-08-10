@@ -22,18 +22,12 @@ dependencies = [
     "docling>=2.118.1",
     "ollama>=0.6.2",
     "pypdfium2>=5.12.1",
-    "pytesseract>=0.3.13",
     "pywebview>=5.3",
+    "rapidocr>=3.9.2",
 ]
 
 [project.scripts]
 asoy = "asoy.__main__:main"
-
-[project.optional-dependencies]
-gpu = [
-    "paddleocr>=3.7.0",
-    "paddlepaddle>=3.3.1",
-]
 
 [dependency-groups]
 dev = [

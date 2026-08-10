@@ -348,4 +348,42 @@ The review screen is the demanding surface: a long list of cropped images paired
 
 ---
 
+## ADR-019 - One OCR engine across both tiers
+
+**Date:** 2026-08-10 · **Status:** Accepted. Supersedes the engine choice in ADR-003, whose two-tier structure is unchanged.
+
+**Decision.** Both tiers run RapidOCR. The hardware tier selects the inference backend, not the engine. Tesseract and PaddleOCR are removed.
+
+**Why.** Discovered while resolving dependencies rather than while planning. RapidOCR arrives with Docling at no additional cost and executes the same PP-OCR model family that PaddleOCR uses, through ONNX Runtime instead of the PaddlePaddle framework. The models are identical, so the accuracy argument for PaddleOCR evaporates once the runtime is interchangeable.
+
+Removing the other two engines removes four costs at once. Tesseract needs a system binary install, which would have been a third setup prerequisite with no bootstrapper, in a product whose largest support cost is already setup friction (ADR-008). PaddleOCR pulls in 28 packages including the PaddlePaddle framework. Those packages brought the only two GPL-family licenses in the tree, crc32c and python-bidi, both LGPL, which would have needed the same packaging analysis that rejected PySide6 in ADR-018. And paddlex capped numpy below 2.4, which constrained the base install even when the optional extra was not synced.
+
+A single engine also means output differs between tiers by speed, not by model. A page that reads correctly on one tier reads correctly on the other, which removes a variable from every bug report.
+
+**Rejected.**
+- *Keeping Tesseract for CPU and PaddleOCR for GPU* - the specified design, written before the dependency tree was resolved. Costs a system prerequisite, 28 packages, two LGPL dependencies, and a numpy ceiling, to run models already present.
+- *RapidOCR for both tiers with PaddleOCR as an optional extra* - keeps the numpy coupling and the LGPL packages alive for a fallback that may never be used.
+
+**Consequences.** ONNX Runtime inference has not been benchmarked against native PaddlePaddle on the development card. Accuracy should be identical since the models are, but throughput is unmeasured. PyTorch is already in the tree for Docling's layout models, so the GPU backend adds no weight.
+
+**Would reverse this.** A measured benchmark showing the ONNX path is materially slower on a full book on 6 GB-class hardware. Measure before switching, and record the measurement.
+
+---
+
+## ADR-020 - PyTorch is an unavoidable dependency, amending ADR-008's rationale
+
+**Date:** 2026-08-10 · **Status:** Accepted. Amends the reasoning in ADR-008; the decision itself stands.
+
+**Decision.** PyTorch is accepted as a hard, non-optional dependency of the base install, at roughly 470 MB.
+
+**Why.** Docling's layout analysis and table structure models are PyTorch. There is no configuration in which Docling parses a PDF correctly without it, and layout plus reading order is the component ADR-009 selected Docling for. The dependency is not a choice that was made; it is a consequence of one that was.
+
+**What this amends.** ADR-008 declined to bundle a model runtime partly on the grounds that shipping PyTorch and OCR models would produce a multi-gigabyte installer. That reasoning is now partly wrong: most of that weight is in the base install regardless of whether Ollama is bundled. The decision to keep Ollama external still holds, but on the remaining grounds, that Ollama solves model distribution, GPU detection, quantization, and updates well, and that bundling it would mean re-releasing Asoy on every model update.
+
+**Consequences.** The installer will be large. Installer size is therefore a stated expectation in SUPPORT.md rather than a defect, and any future work on reducing it starts from the Docling model stack, not from Ollama.
+
+**Would reverse this.** Docling offering a layout backend that does not require PyTorch, or a decision to replace Docling, which would reopen ADR-009.
+
+---
+
 *Companion documents: `ARCHITECTURE.md` (what the system is), `RUNBOOK.md` (how to operate it), `SUPPORT.md` (what users are told), `DATA.md` (what is held).*
