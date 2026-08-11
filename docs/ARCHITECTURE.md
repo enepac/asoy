@@ -137,6 +137,8 @@ Takes the non-text blocks Docling identified and assigns each a type — photogr
 
 Tables that Docling extracts cleanly bypass the vision model entirely and are rendered from their structure, which is both faster and more accurate than describing a picture of a table. They are typed by the parser and never reach the classifier, which sees pictures only.
 
+**A scanned table is not one of those.** In a scanned book a table is an image with no extractable cells, so it arrives as a picture block and the classifier must be able to answer `table` for it (ADR-028). The two paths do not meet: the parser has already typed anything with cells before the classifier runs, so the classifier's `table` answer only ever applies to a picture *of* a table, which is described rather than rendered.
+
 Pictures are typed in two stages, cheapest first (ADR-026):
 
 1. **A caption pre-pass.** Books usually say what their pictures are, and reading "Figure 12. Photograph of the north face" costs nothing next to a model call. It settles or abstains, never guesses: a caption naming two families, or none, sends the block on. Only the caption is decisive — nearby prose is collected for the model call rather than read as a rule, because a chart mentioned three sentences away is not a statement about this block.

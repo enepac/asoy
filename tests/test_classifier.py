@@ -271,23 +271,63 @@ def test_a_block_with_no_text_gets_the_bare_prompt() -> None:
     assert build_prompt("  ", "") == CLASSIFICATION_PROMPT
 
 
-def test_the_schema_offers_every_type_except_table() -> None:
-    """`table` is excluded deliberately, and the exclusion is the part worth guarding.
-
-    The parser types tables from their extracted cells and they never reach the classifier
-    (ARCHITECTURE 4.6). Offering the label would invite the model to apply it to a picture of a
-    table, which would then take the structural path with no cells to render.
-    """
+def test_the_schema_offers_every_type_including_table() -> None:
+    """ADR-028 re-admitted `table`. A scanned table is a picture and needs the right prompt."""
     allowed = set(RESPONSE_SCHEMA["properties"]["type"]["enum"])  # type: ignore[index]
 
-    assert allowed == {kind.value for kind in DescriptionType} - {DescriptionType.TABLE.value}
-    assert set(CLASSIFIABLE_TYPES) == set(DescriptionType) - {DescriptionType.TABLE}
+    assert allowed == {kind.value for kind in DescriptionType}
+    assert set(CLASSIFIABLE_TYPES) == set(DescriptionType)
+    assert DescriptionType.TABLE in CLASSIFIABLE_TYPES
 
 
-def test_a_model_answering_table_anyway_is_not_trusted() -> None:
-    """The schema forbids it; a model or an Ollama version that ignored the schema must not win."""
-    client = FakeClient({"type": "table", "certainty": 0.99})
-    assert classify(_block(), tier=Tier.GPU, client=client).type is DescriptionType.UNKNOWN
+def test_a_scanned_table_can_be_typed_as_a_table() -> None:
+    """The case ADR-026's exclusion made unreachable and ADR-028 restored.
+
+    Brinton's tables are scans: they arrive as picture blocks, and before this the most narratable
+    block type in the book could only come back chart, diagram, or unknown.
+    """
+    client = FakeClient({"type": "table", "certainty": 0.9})
+    result = classify(_block(caption="Fig. 8."), tier=Tier.GPU, client=client)
+
+    assert result.type is DescriptionType.TABLE
+    assert result.evidence is Evidence.MODEL
+
+
+def test_the_table_answer_only_ever_applies_to_a_picture_of_a_table() -> None:
+    """The distinction ADR-028 rests on, guarded rather than assumed.
+
+    A table Docling extracted cleanly is typed by the parser from its own cells and never becomes
+    a classifier input at all. Only a table that arrived as an image can reach this answer, and
+    such a table has no cells to render — so the structural path is untouched by the change.
+    """
+    from asoy.parser import Block, BlockKind, NonText
+
+    structural = Block(
+        kind=BlockKind.NON_TEXT,
+        non_text=NonText(
+            type=DescriptionType.TABLE,
+            locator="table[0]",
+            table=(("Name", "Year"), ("Ada", "1843")),
+        ),
+    )
+    scanned = Block(
+        kind=BlockKind.NON_TEXT,
+        non_text=NonText(type=DescriptionType.UNKNOWN, locator="picture[0]", table=None),
+    )
+
+    assert structural.non_text is not None and structural.non_text.table is not None
+    assert scanned.non_text is not None and scanned.non_text.table is None
+
+    # The assembler renders the structural one from its cells and never consults the classifier.
+    from asoy.assemble import _description_for
+    from asoy.fences import DescriptionSource
+
+    rendered = _description_for(structural.non_text)
+    assert rendered.source is DescriptionSource.STRUCTURE
+    assert "Ada" in rendered.body
+
+    # The scanned one carries no cells, so a structural render is not available to it.
+    assert _description_for(scanned.non_text).source is DescriptionSource.MODEL
 
 
 # --- Batching -----------------------------------------------------------------------------------

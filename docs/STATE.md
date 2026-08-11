@@ -13,10 +13,10 @@
 | | |
 |---|---|
 | Version | 0.1.0 (`pyproject.toml`, confirmed by `asoy --version`) |
-| Branch / commit | `main` at `85424b8`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
-| Push state | `origin/main` was at `2abb065` when this was verified, behind the local branch above. Anything reading this repository from GitHub sees that commit, not the one in the row above. **State the sync point, never a count** — a count is wrong the moment either side moves, and this line has gone stale twice that way |
-| Tests | 297 passing, 2 deselected (fences 59, classifier 41, environment 36, pipeline 38, classifier-reference 33 of which 2 need Ollama, tiers 26, router 24, smoke 22, calibre 20) |
-| Highest ADR | ADR-027 |
+| Branch / commit | `main` at `b06f65e`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
+| Push state | `origin/main` was at `1c88dad` when this was verified, behind the local branch above. Anything reading this repository from GitHub sees that commit, not the one in the row above. **State the sync point, never a count** — a count is wrong the moment either side moves, and this line has gone stale twice that way |
+| Tests | 301 passing, 2 deselected (fences 59, classifier 42, environment 36, pipeline 38, classifier-reference 36 of which 2 need Ollama, tiers 26, router 24, smoke 22, calibre 20) |
+| Highest ADR | ADR-028 |
 | Dependency tree | 117 packages resolved; license scan shows no GPL-family or AGPL entry |
 | Release | None. No installer, no signing, no users |
 
@@ -45,7 +45,7 @@ Each line names the command that proves it. All were run.
 - **Desktop shell** (4.1). Window opens; the JS bridge returns version, tier, and environment. Missing: file picker, job queue, progress reporting, review screen. Nothing can be converted from the UI — only from `asoy convert`.
 - **Parser** (4.4). Chapters, headings, verbatim text, and non-text blocks carried in reading order. Tables arrive with their cells when Docling extracts them cleanly.
 - **Assembler and exporter** (4.8, 4.9). The delimiter is defined, emitted, and parsed (ADR-025). Every picture becomes a `failed` description with placeholder text, because there is no generator to produce a real one — correct interim behaviour under invariant 7, not finished behaviour.
-- **Block classifier** (4.6). Caption pre-pass, tier-model call, abstention rule, and the measurement harness all exist (ADR-026). **Not wired to anything**: the parser still types every picture `unknown` and nothing calls `classify`. It landed with its harness rather than with a consumer, so wiring it into the parser is a separate change.
+- **Block classifier** (4.6). Caption pre-pass, tier-model call, abstention rule, and the measurement harness all exist (ADR-026, ADR-027, ADR-028). Its answer set includes `table`, because a scanned table arrives as a picture block (ADR-028). **Not wired to anything**: the parser still types every picture `unknown` and nothing calls `classify`. It landed with its harness rather than with a consumer, so wiring it into the parser is a separate change.
 - **Format router** (4.3). Complete for every accepted format, but only EPUB and ODT have been converted end to end. PDF, DOCX, PPTX, XLSX, HTML, images, and plain text route correctly and have **never been run through a conversion**.
 
 ## Not started
@@ -60,7 +60,7 @@ Each line names the command that proves it. All were run.
 - **GPU-tier conversion speed is not what `ARCHITECTURE` §5 implies** (ADR-021). The tier delivers better descriptions but not faster conversion; the layout pass and OCR both run on CPU. Unmeasured, and no benchmark exists because no full conversion has been timed.
 - **The parser depends on a private Docling attribute** to close the source file (ADR-024). A Docling upgrade breaks it silently by design; two named tests are the only guard.
 - **Every picture in every book currently converts to a placeholder.** The output is honest and it is not useful yet. This is the single largest gap between what Asoy does and what it is for.
-- **The classifier's accuracy is unmeasured.** `reference/classifier/` is empty — the public-domain books are being gathered — so no acceptance number in ADR-026 or ADR-027 has been measured against anything. The harness runs and the acceptance test skips loudly rather than passing on no evidence.
+- **The classifier's accuracy is unmeasured.** `reference/classifier/` is empty — the public-domain books are being gathered — so no acceptance number in ADR-026, ADR-027, or ADR-028 has been measured against anything. The harness runs and the acceptance test skips loudly rather than passing on no evidence.
 - **The classification prompt is unratified.** It is isolated in `src/asoy/classifier/prompt.py` and marked, and `CLAUDE.md` §5 treats prompts as ask-first. It has never been compared against an alternative.
 - **`CERTAINTY_FLOOR` is a placeholder, not a considered value.** It moves the measured `unknown` rate almost directly and should be set from the reference set once that exists.
 - **One input cannot be represented**: author text containing a line that is exactly `<!-- /asoy:text -->`. It raises and writes nothing rather than emitting a file that misparses itself (ADR-025). Requires a book to contain Asoy's own closing marker verbatim.
@@ -70,7 +70,9 @@ Each line names the command that proves it. All were run.
 
 ## The next move
 
-**Gather the reference sets.** Two components now depend on material that does not exist: the classifier's acceptance bar cannot be measured, and the description generator cannot be built responsibly without its own set, since prompt quality is measured against a reference set or it is not measured (`CLAUDE.md` §9). About 60 public-domain picture blocks from four or more books, per `reference/classifier/README.md`.
+**Gather the reference sets.** Two components now depend on material that does not exist: the classifier's acceptance bar cannot be measured, and the description generator cannot be built responsibly without its own set, since prompt quality is measured against a reference set or it is not measured (`CLAUDE.md` §9). About 60 public-domain picture blocks from four or more distinct sources, per `reference/classifier/README.md` and the sourcing rules in ADR-028.
+
+Triage found two usable sources, not three: Brinton (149 picture blocks, the only chart source) and *The Boy Mechanic*, whose two volumes count as one source. Still needed: two more sources, one of them with type-naming captions, and `table` entries so ADR-028's reversal condition is measurable.
 
 The description generator (4.7) remains the largest gap in the product, and building it before there is anything to measure it with would repeat the position the classifier is in now: complete, plausible, and unevidenced.
 

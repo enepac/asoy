@@ -63,8 +63,14 @@ MAX_WRONGLY_UNKNOWN_RATE = 0.20
 
 # Which types are near-substitutes for each other. Confusion inside a family is a smaller error
 # than confusion across one, and the bar treats them differently.
+#
+# `table` joins the graphical family with ADR-028, which re-admitted it as an answer. It belongs
+# there on the merits — a table and a chart both present data, and confusing them costs about what
+# confusing a diagram for a chart costs. It also has to belong somewhere: a type in no family is
+# counted as neither kind of confusion, so a chart called a table would drop out of both figures
+# and out of the capped bar, and ADR-028's own reversal condition asks exactly that question.
 PICTORIAL = frozenset({DescriptionType.PHOTOGRAPH, DescriptionType.ILLUSTRATION})
-GRAPHICAL = frozenset({DescriptionType.DIAGRAM, DescriptionType.CHART})
+GRAPHICAL = frozenset({DescriptionType.DIAGRAM, DescriptionType.CHART, DescriptionType.TABLE})
 
 
 class ReferenceError(RuntimeError):
@@ -82,6 +88,12 @@ class Entry:
     reasoning: str
     caption: str = ""
     context: str = ""
+    # True when the figure reads sideways on the page, as scanned landscape plates do. Recorded
+    # rather than corrected (ADR-028): de-rotating would tidy the input to make the test easier,
+    # and a classifier that only works on upright figures does not work on scanned books. The
+    # flag lets the confusion matrix be read both ways, so a bar met only on upright figures is
+    # visible as the narrower claim it is.
+    rotated: bool = False
 
     def to_block(self) -> PictureBlock:
         try:
@@ -311,6 +323,7 @@ def load_manifest(directory: Path) -> tuple[Entry, ...]:
                 reasoning=str(raw["reasoning"]),
                 caption=str(raw.get("caption", "")),
                 context=str(raw.get("context", "")),
+                rotated=bool(raw.get("rotated", False)),
             )
         )
     return tuple(entries)

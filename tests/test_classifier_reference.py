@@ -40,6 +40,7 @@ PHOTOGRAPH = DescriptionType.PHOTOGRAPH
 ILLUSTRATION = DescriptionType.ILLUSTRATION
 DIAGRAM = DescriptionType.DIAGRAM
 CHART = DescriptionType.CHART
+TABLE = DescriptionType.TABLE
 UNKNOWN = DescriptionType.UNKNOWN
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -72,6 +73,18 @@ def test_within_family_confusion_is_not_counted_as_cross_family() -> None:
 
     assert metrics.cross_family == 0
     assert metrics.within_family == 2
+
+
+def test_table_is_counted_in_a_family_rather_than_falling_through() -> None:
+    """ADR-028 made `table` answerable, and a type in no family escapes both confusion figures.
+
+    A chart called a table would otherwise lower accuracy while passing the capped bar untouched,
+    and ADR-028's reversal condition asks precisely whether that confusion happens.
+    """
+    metrics = _metrics((CHART, TABLE), (TABLE, CHART), (PHOTOGRAPH, TABLE), (TABLE, PHOTOGRAPH))
+
+    assert metrics.within_family == 2, "chart against table is a near-substitute error"
+    assert metrics.cross_family == 2, "a photograph against a table is not"
 
 
 def test_a_correct_answer_is_neither_kind_of_confusion() -> None:
@@ -227,6 +240,29 @@ def test_caption_and_context_default_to_empty(tmp_path: Path) -> None:
     assert (entry.caption, entry.context) == ("", "")
 
 
+def test_rotation_is_recorded_and_defaults_to_upright(tmp_path: Path) -> None:
+    """ADR-028: rotated figures stay rotated, and the flag is how the matrix reads both ways."""
+    upright, sideways = load_manifest(
+        _write(tmp_path, [_entry(), _entry(rotated=True, locator="picture[1]")])
+    )
+
+    assert upright.rotated is False
+    assert sideways.rotated is True
+
+
+def test_the_set_can_be_split_by_rotation(tmp_path: Path) -> None:
+    """A bar met only on upright figures is a narrower claim, and must be visible as one."""
+    entries = load_manifest(
+        _write(
+            tmp_path,
+            [_entry(), _entry(rotated=True, locator="picture[1]"), _entry(locator="picture[2]")],
+        )
+    )
+
+    assert len([e for e in entries if e.rotated]) == 1
+    assert len([e for e in entries if not e.rotated]) == 2
+
+
 def test_an_absent_manifest_is_an_empty_set_not_an_error(tmp_path: Path) -> None:
     """The core is expected to be absent until the books are gathered."""
     assert load_manifest(tmp_path / "nothing-here") == ()
@@ -353,6 +389,15 @@ def test_the_classifier_meets_the_acceptance_bar(capsys: pytest.CaptureFixture[s
 
     with capsys.disabled():
         print(f"\ntier: {tier.value}\n{metrics.report('core')}")
+        # ADR-028: the matrix reads both ways, so a bar met only on upright figures shows as the
+        # narrower claim it is rather than passing as a claim about scanned books.
+        for label, subset in (
+            ("core, upright only", tuple(e for e in entries if not e.rotated)),
+            ("core, rotated only", tuple(e for e in entries if e.rotated)),
+        ):
+            if subset and len(subset) != len(entries):
+                split = evaluate(subset, lambda block: classify(block, tier=tier))
+                print(f"\n{split.report(label)}")
 
     assert metrics.cross_family_rate <= MAX_CROSS_FAMILY_RATE, metrics.confusion_table()
     assert metrics.wrongly_unknown_rate <= MAX_WRONGLY_UNKNOWN_RATE, metrics.confusion_table()

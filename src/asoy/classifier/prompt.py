@@ -22,18 +22,18 @@ from __future__ import annotations
 
 from asoy.fences import DescriptionType
 
-# What the model may answer. Every member of DescriptionType except `table`, which is excluded
-# deliberately rather than forgotten: the parser types tables from their own extracted structure
-# and they never reach the classifier (ARCHITECTURE 4.6). Offering the label would invite the
-# model to apply it to a picture of a table, which would then be sent down the structural path
-# that has no cells to render.
-CLASSIFIABLE_TYPES: tuple[DescriptionType, ...] = (
-    DescriptionType.PHOTOGRAPH,
-    DescriptionType.ILLUSTRATION,
-    DescriptionType.DIAGRAM,
-    DescriptionType.CHART,
-    DescriptionType.UNKNOWN,
-)
+# What the model may answer: every member of DescriptionType, `table` included (ADR-028).
+#
+# It was excluded at first, on the reasoning that the parser types tables from their own extracted
+# structure so they never reach the classifier. Triage against a scanned book falsified that: a
+# scanned table is an image, arrives as a picture block, and is exactly the input the classifier
+# exists to type. Withholding the label meant the most narratable block type in a book could only
+# come back `chart`, `diagram`, or `unknown`, each selecting the wrong description prompt.
+#
+# The structural path is unaffected. The parser types a cleanly-extracted table before the
+# classifier sees anything, so this answer only ever applies to a picture *of* a table, which has
+# no cells to render and needs describing like any other picture.
+CLASSIFIABLE_TYPES: tuple[DescriptionType, ...] = tuple(DescriptionType)
 
 # The model answers into this schema rather than into free text. Ollama constrains generation to
 # it, so the reply cannot arrive as prose that needs guessing at, and an unparseable response
@@ -59,6 +59,7 @@ Answer with the single label that best fits what the element IS, not what it dep
 - diagram: a figure explaining structure, process, or place. Schematics, maps, cutaways, \
 flowcharts.
 - chart: a figure presenting data. Axes, plotted series, bars, pie segments, scales.
+- table: data laid out in labelled rows and columns, as a grid of values rather than a plot.
 - unknown: you cannot tell, or it is none of these.
 
 Choose unknown rather than guessing. A wrong label is worse than no label, because it selects the \

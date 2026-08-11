@@ -208,9 +208,10 @@ def _ask_model(
         payload = json.loads(response.response)
         kind = DescriptionType(str(payload["type"]))
         if kind not in CLASSIFIABLE_TYPES:
-            # The schema forbids `table`, but the schema is enforced by Ollama rather than by us.
-            # A version that stopped enforcing it must not be able to route a picture of a table
-            # down the structural path, which has no cells to render.
+            # The answer set is enforced by Ollama through the schema rather than by us, so an
+            # answer outside it means the schema was not applied. Every member is currently
+            # classifiable (ADR-028), which makes this unreachable today and worth keeping: it is
+            # what stops a future narrowing of the set from being silently unenforced.
             return None
     except Exception:
         # Unreachable Ollama, a missing model, a timeout, or a reply that did not match the

@@ -599,6 +599,8 @@ This is additive, so it is MINOR-compatible under ADR-006, and it costs nothing 
 3. **`unknown` is retained below a confidence floor**, and is never replaced by a guess.
 4. **Type and description are not folded into one model call.**
 
+*This entry does not discuss tables. The implementation of it excluded `table` from the model's answer set, on the reasoning that the parser types tables from their structure so they never reach the classifier — a decision that was made in code and never recorded here. **ADR-028 records it and reverses it**, on evidence that a scanned table has no extractable cells and does reach the classifier.*
+
 **Why the pre-pass first.** Books usually say what their pictures are. A caption reading "Figure 12. Photograph of the north face" has already answered the question, and spending seconds of a vision model's time to recover an answer sitting in the text is waste that scales with the length of the book. The pre-pass settles or abstains and never guesses: a caption naming terms from two families, or none, sends the block on. A weak guess there would be worse than no answer, because it would be spent *instead of* the model call rather than alongside it.
 
 Only the caption is read. Surrounding prose mentioning a chart three sentences away is not a statement about this block. That prose is still collected and passed to the model, which can weigh it against the image — useful as evidence, useless as a rule.
@@ -685,6 +687,58 @@ That is not a tight bar, it is a miscounted one. It charged the classifier for e
 A clause was proposed for the amendment rule, exempting thresholds that have not yet been measured. It is rejected: nearly every threshold in this log is unmeasured when it is written, so the clause would have become a second default rather than an exception, and the rule would have permitted in-place edits to most of the decisions in the file.
 
 **Would reverse this.** The first measured run against the core set, which may move either the 20% bar or `CERTAINTY_FLOOR`, in either direction, and should be expected to move at least one. They are a considered pair, not an evidenced one, and the run that first produces evidence is the run that settles them.
+
+---
+
+## ADR-028 - Reference set sourcing, and scanned tables are tables
+
+**Date:** 2026-08-10 · **Status:** Accepted. Changes the classifier's answer set as implemented under ADR-026, and sets the sourcing rules for the reference set that ADR-026 requires.
+
+**Context: what the triage measured.** Three candidate public-domain books were converted and inspected. The measurements are recorded here because they are the evidence the rulings below rest on, and because the next session would otherwise repeat the work.
+
+| Book | Picture blocks | Table blocks |
+|---|---|---|
+| Brinton, *Graphic Methods for Presenting Facts* (1914), Internet Archive | 149 | 0 |
+| *The Boy Mechanic*, Volume 1 (Gutenberg 12655) | 830 | 21 |
+| *The Boy Mechanic*, Book 3 (Gutenberg 71856) | 857 | 45 |
+
+All three are EPUB 3 images editions. **Picture blocks are individual figures, not page scans** — the expected failure did not occur, and Brinton survives as the only chart source found. `picture[N]` corresponds to the Nth `<img>` in spine order, confirmed at head, middle, and tail in all three books; Brinton's filenames additionally encode the printed page number.
+
+**Docling exposes no image bytes and no source filename for EPUB pictures** — `picture.image` is `None` and `get_image()` returns `None` — so a manifest builder extracts images from the EPUB archive and correlates by spine order itself. That recipe is verified and is the only way the manifest's locator column can be trusted.
+
+**Decision 1: `table` is re-admitted to the classifier's answer set.**
+
+The implementation of ADR-026 excluded it, reasoning that the parser types tables from their own extracted structure so they never reach the classifier. The triage falsified the premise. Brinton's tables are scans: they have no extractable cells, they arrive as picture blocks, and scanned pages are a first-class input for this product rather than one book's artifact. Withholding the label meant the most narratable block type in a book could only come back `chart`, `diagram`, or `unknown`, each selecting the wrong description prompt.
+
+The structural path is untouched. The parser types anything with cells before the classifier runs, so this answer only ever applies to a picture *of* a table, which has no cells to render and needs describing like any other picture. `type="table"` with `source="model"` was already legal in the fence (ADR-025, amended by the `source` attribute), so nothing downstream changes.
+
+**Decision 2: one source must have type-naming captions.** None of the three does. Brinton's alt text is `Image 0`, `Image 1`, … for all 149; Boy Mechanic Book 3 has 515 empty captions out of 857, and the rest are descriptive (`Boys sailing`) rather than type-naming. A core set built from these alone would send essentially every block to the model and measure the caption pre-pass on nothing.
+
+Separately, the pre-pass gets its own caption unit fixtures. **The two measure different things and neither substitutes for the other:** fixtures prove the pre-pass *parses* a caption correctly, and can be written for any wording. The core set proves it *fires* — that real books actually phrase captions in ways it catches, at a rate worth the code. A pre-pass that passes every fixture and never triggers on a real book is working and worthless.
+
+**Decision 3: Boy Mechanic Volume 1 and Book 3 count as one source.** Same author, same publisher, same illustrator. The four-source rule exists because a set drawn from one book measures that book's rendering pipeline as much as the classifier, and two volumes of one series are one pipeline. The triage therefore yielded two sources, not three.
+
+**Decision 4: rotated figures stay, unmodified.** Two of three inspected Brinton figures read sideways, an artifact of scanning landscape plates. De-rotating them corrects the input to make the test easier — the same instinct this project refused when it rejected escaping author text (ADR-025) and when it rejected taking the model's low-certainty guess (ADR-026). A classifier that only works on upright figures does not work on scanned books.
+
+The manifest carries a `rotated` flag so the confusion matrix can be read both ways, and if the chart group ends up entirely rotated that is recorded as a limitation rather than corrected — it would mean the chart bar is measured only on rotated input, which is a narrower claim than it appears.
+
+**Decision 5: the ambiguous group draws from at least two sources, and not predominantly Brinton.** Brinton is a single Internet Archive scan, so a `unknown` group drawn mostly from it would measure one scanner's halftone artefacts rather than genuine ambiguity about what a figure is.
+
+**Rejected.**
+- *Excluding rotated figures from the set* — costs most of the chart supply, since Brinton is the only chart source found, and tunes the classifier against a world tidier than the one it runs in.
+- *De-rotating them before adding them* — same objection without the supply cost, and it moves the measurement further from the input. If rotation is a problem, the measurement should say so.
+- *Answering `unknown` for scanned tables* — the status quo this decision changes. It produces a placeholder-grade description for the most structured, most narratable content in a book, which is the worst place to abstain.
+- *Counting the two Boy Mechanic volumes as two sources* — would satisfy the four-source rule on paper while measuring one illustrator twice.
+
+**Consequences.** The prompt gains a `table` line describing the label, so the change touches unratified prompt text (see ADR-026 on that status). Two distinct sources are in hand against a rule of four, so sourcing continues.
+
+`table` joins the graphical family in the harness, alongside `diagram` and `chart`. On the merits a table and a chart both present data, so confusing them costs about what confusing a diagram for a chart costs. It also has to belong to a family at all: a type in neither family is counted as neither cross-family nor within-family confusion, so a chart called a table would have lowered accuracy while leaving the capped bar untouched — and the reversal condition below asks exactly that question.
+
+The core set now needs `table` entries. Without them the risk this decision introduces is measurable and the benefit is not: the reversal condition weighs charts-called-tables against scanned-tables-typed-correctly, and the second term is unmeasurable if no core block expects `table`.
+
+The classifier's `unknown` answer now competes with `table` on scanned tables, which are visually close to some charts. The reversal condition below is aimed squarely at that.
+
+**Would reverse this.** On decision 1: a measured run showing the `table` answer confuses charts as tables more often than it correctly types scanned tables — which would mean the label costs more in cross-family error than it earns, and the exclusion was right for a reason nobody had yet stated.
 
 ---
 
