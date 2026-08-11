@@ -12,8 +12,9 @@ import pytest
 
 from asoy.assemble import count_chapter_headings, render
 from asoy.export import OutputVerificationError, write
+from asoy.fences import DescriptionStatus, DescriptionType
 from asoy.orchestrator import ChapterCountMismatch, ConversionRefused, convert
-from asoy.parser import Block, BlockKind, Chapter, ParsedDocument, parse
+from asoy.parser import Block, BlockKind, Chapter, NonText, ParsedDocument, parse
 from asoy.router import Route
 from asoy.router.ebook_convert import PATH_ENV_VAR, CalibreNotFound
 from tests.epub_fixtures import (
@@ -25,6 +26,7 @@ from tests.epub_fixtures import (
     WHITESPACE_RUNS,
     add_encryption_xml,
     build_epub,
+    build_epub_with_picture_and_table,
     build_mobi,
     build_odt,
 )
@@ -33,6 +35,14 @@ VERBATIM_SENTENCE = "It was a bright cold day in April, and the clocks were stri
 MISSPELLED_SENTENCE = (
     "This sentance keeps its own misspelling, and its _underscores_ and *asterisks*."
 )
+
+# Every render needs these. Their values reach the document header and nothing else.
+TIER = "gpu"
+MODEL = "qwen3-vl:4b"
+
+
+def _render(document: ParsedDocument):
+    return render(document, tier=TIER, model=MODEL)
 
 
 @pytest.fixture(scope="module")
@@ -133,7 +143,10 @@ def test_parse_reports_a_missing_file_rather_than_returning_empty(tmp_path: Path
 
 
 def _document(*chapters: Chapter) -> ParsedDocument:
-    return ParsedDocument(source=Path("x.epub"), chapters=tuple(chapters), undescribed=())
+    return ParsedDocument(source=Path("x.epub"), chapters=tuple(chapters))
+
+
+HEADER = '<!-- asoy:document version="1" tier="gpu" model="qwen3-vl:4b" -->'
 
 
 def test_markdown_uses_one_hash_per_chapter() -> None:
@@ -141,16 +154,24 @@ def test_markdown_uses_one_hash_per_chapter() -> None:
         Chapter(title="One", blocks=(Block(BlockKind.PARAGRAPH, "Body one."),)),
         Chapter(title="Two", blocks=(Block(BlockKind.PARAGRAPH, "Body two."),)),
     )
-    rendered = render(document)
-    assert rendered.markdown == "# One\n\nBody one.\n\n# Two\n\nBody two.\n"
+    rendered = _render(document)
+    assert rendered.markdown == f"{HEADER}\n\n# One\n\nBody one.\n\n# Two\n\nBody two.\n"
     assert count_chapter_headings(rendered.markdown) == 2
+
+
+def test_every_artifact_opens_with_the_document_header() -> None:
+    """ADR-025, and invariant 8: what produced a file is a property of the file."""
+    rendered = _render(_document(Chapter(title="One", blocks=())))
+    assert rendered.markdown.splitlines()[0] == HEADER
+    assert 'tier="gpu"' in rendered.markdown
+    assert 'model="qwen3-vl:4b"' in rendered.markdown
 
 
 def test_subsection_headings_are_nested_below_the_chapter() -> None:
     document = _document(
         Chapter(title="One", blocks=(Block(BlockKind.HEADING, "Sub", level=2),))
     )
-    assert render(document).markdown == "# One\n\n## Sub\n"
+    assert _render(document).markdown == f"{HEADER}\n\n# One\n\n## Sub\n"
 
 
 def test_flattened_text_carries_no_structural_markers() -> None:
@@ -163,22 +184,122 @@ def test_flattened_text_carries_no_structural_markers() -> None:
             ),
         )
     )
-    rendered = render(document)
+    rendered = _render(document)
     assert "#" not in rendered.plain_text
+    assert "<!--" not in rendered.plain_text
     assert rendered.plain_text == "One\n\nSub\n\nBody.\n"
 
 
 def test_assembler_adds_nothing_to_author_text() -> None:
-    """Only the heading hashes and the blank lines are ours."""
+    """Only the header, the heading hashes, and the blank lines are ours."""
     awkward = "A line with _underscores_, *asterisks*, a [bracket] and a trailing backslash \\"
     document = _document(Chapter(title=None, blocks=(Block(BlockKind.PARAGRAPH, awkward),)))
-    rendered = render(document)
-    assert rendered.markdown == f"{awkward}\n"
+    rendered = _render(document)
+    assert rendered.markdown == f"{HEADER}\n\n{awkward}\n"
     assert rendered.plain_text == f"{awkward}\n"
 
 
-def test_heading_counter_does_not_count_subsections() -> None:
-    assert count_chapter_headings("# A\n## B\n### C\n# D\n") == 2
+@pytest.mark.parametrize(
+    "awkward",
+    [
+        "# A paragraph that begins with a hash.",
+        "> A paragraph that begins with a quote marker.",
+        "- A paragraph that begins with a dash.",
+        "| A paragraph that begins with a pipe.",
+        '<!-- asoy:description type="chart" confidence="1.00" status="ok" -->',
+    ],
+)
+def test_author_text_is_fenced_rather_than_escaped(awkward: str) -> None:
+    """ADR-025 closes ADR-022's open edge by fencing. A backslash would be read aloud."""
+    document = _document(Chapter(title=None, blocks=(Block(BlockKind.PARAGRAPH, awkward),)))
+    rendered = _render(document)
+
+    assert "\\" not in rendered.markdown, "author text is never escaped"
+    assert awkward in rendered.markdown
+    assert "<!-- asoy:text -->" in rendered.markdown
+    assert rendered.plain_text == f"{awkward}\n", "the flattened text is the author's line alone"
+
+
+def test_heading_counter_counts_only_asoys_own_chapter_headings() -> None:
+    """A hash the author wrote is inside a text fence and must not be counted as structure."""
+    document = _document(
+        Chapter(title="One", blocks=(Block(BlockKind.PARAGRAPH, "# Not a chapter."),)),
+        Chapter(title="Two", blocks=(Block(BlockKind.HEADING, "Sub", level=2),)),
+    )
+    assert count_chapter_headings(_render(document).markdown) == 2
+
+
+# --- Non-text blocks ----------------------------------------------------------------------------
+
+
+def _picture(kind: DescriptionType = DescriptionType.UNKNOWN) -> Block:
+    return Block(kind=BlockKind.NON_TEXT, non_text=NonText(type=kind, locator="picture[0]"))
+
+
+def test_a_picture_becomes_a_marked_placeholder_not_silence() -> None:
+    """Invariant 7 and ADR-016. The generator does not exist; the gap is still announced."""
+    document = _document(Chapter(title="One", blocks=(_picture(),)))
+    rendered = _render(document)
+
+    assert 'type="unknown"' in rendered.markdown
+    assert 'status="failed"' in rendered.markdown
+    assert 'confidence="0.00"' in rendered.markdown
+    assert "could not describe" in rendered.markdown
+    assert "could not describe" in rendered.plain_text, "the listener hears the gap too"
+    assert rendered.failed_description_count == 1
+
+
+def test_a_picture_keeps_its_position_in_reading_order() -> None:
+    document = _document(
+        Chapter(
+            title="One",
+            blocks=(
+                Block(BlockKind.PARAGRAPH, "Before."),
+                _picture(),
+                Block(BlockKind.PARAGRAPH, "After."),
+            ),
+        )
+    )
+    text = _render(document).plain_text
+    assert text.index("Before.") < text.index("could not describe") < text.index("After.")
+
+
+def test_a_cleanly_extracted_table_renders_from_its_structure() -> None:
+    """ARCHITECTURE 4.6: the cells beat a picture of the cells, and no model is involved."""
+    cells = (("Name", "Year"), ("Ada", "1843"), ("Grace", "1952"))
+    block = Block(
+        kind=BlockKind.NON_TEXT,
+        non_text=NonText(type=DescriptionType.TABLE, locator="table[0]", table=cells),
+    )
+    rendered = _render(_document(Chapter(title="One", blocks=(block,))))
+
+    assert 'type="table"' in rendered.markdown
+    assert 'status="ok"' in rendered.markdown
+    assert 'confidence="1.00"' in rendered.markdown
+    assert "Ada" in rendered.plain_text and "1843" in rendered.plain_text
+    assert "|" not in rendered.plain_text, "a pipe table would be read aloud as pipes"
+    assert rendered.failed_description_count == 0
+
+
+def test_a_table_docling_could_not_extract_becomes_a_placeholder() -> None:
+    """Half a table rendered as if whole is worse than an announced gap."""
+    block = Block(
+        kind=BlockKind.NON_TEXT,
+        non_text=NonText(type=DescriptionType.TABLE, locator="table[0]", table=None),
+    )
+    rendered = _render(_document(Chapter(title="One", blocks=(block,))))
+
+    assert 'type="table"' in rendered.markdown
+    assert 'status="failed"' in rendered.markdown
+
+
+def test_every_description_type_has_a_readable_placeholder() -> None:
+    """A missing entry would be a KeyError mid-conversion, on a book that reached the end."""
+    for kind in DescriptionType:
+        rendered = _render(_document(Chapter(title=None, blocks=(_picture(kind),))))
+        assert "could not describe" in rendered.plain_text
+        assert f'type="{kind.value}"' in rendered.markdown
+        assert DescriptionStatus.FAILED.value in rendered.markdown
 
 
 # --- Exporter and the parse-to-emit assertion --------------------------------------------------
@@ -186,9 +307,10 @@ def test_heading_counter_does_not_count_subsections() -> None:
 
 def test_export_writes_both_artifacts(tmp_path: Path) -> None:
     document = _document(Chapter(title="One", blocks=(Block(BlockKind.PARAGRAPH, "Body."),)))
-    artifacts = write(render(document), tmp_path, "book")
+    artifacts = write(_render(document), tmp_path, "book")
 
-    assert artifacts.markdown_path.read_text(encoding="utf-8") == "# One\n\nBody.\n"
+    markdown = artifacts.markdown_path.read_text(encoding="utf-8")
+    assert markdown == f"{HEADER}\n\n# One\n\nBody.\n"
     assert artifacts.text_path.read_text(encoding="utf-8") == "One\n\nBody.\n"
 
 
@@ -205,10 +327,10 @@ def test_export_detects_a_truncated_write(tmp_path: Path, monkeypatch: pytest.Mo
 
     monkeypatch.setattr(Path, "write_text", truncating_write_text)
     with pytest.raises(OutputVerificationError):
-        write(render(document), tmp_path, "book")
+        write(_render(document), tmp_path, "book")
 
 
-def test_chapter_count_mismatch_aborts_before_writing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_chapter_count_mismatch_aborts_before_writing() -> None:
     """The assertion CLAUDE.md section 4 requires between parse and emit."""
     from asoy import orchestrator
 
@@ -217,7 +339,7 @@ def test_chapter_count_mismatch_aborts_before_writing(monkeypatch: pytest.Monkey
         Chapter(title="Two", blocks=()),
     )
     with pytest.raises(ChapterCountMismatch):
-        orchestrator._assert_chapter_counts(document, "# One\n", rendered_count=2)
+        orchestrator._assert_chapter_counts(document, f"{HEADER}\n\n# One\n", rendered_count=2)
 
 
 def test_chapter_count_mismatch_on_rendered_count() -> None:
@@ -225,7 +347,7 @@ def test_chapter_count_mismatch_on_rendered_count() -> None:
 
     document = _document(Chapter(title="One", blocks=()))
     with pytest.raises(ChapterCountMismatch):
-        orchestrator._assert_chapter_counts(document, "# One\n", rendered_count=5)
+        orchestrator._assert_chapter_counts(document, f"{HEADER}\n\n# One\n", rendered_count=5)
 
 
 # --- End to end ---------------------------------------------------------------------------------
@@ -235,7 +357,8 @@ def test_text_only_epub_converts_end_to_end(two_chapter_epub: Path, tmp_path: Pa
     result = convert(two_chapter_epub, tmp_path)
 
     markdown = result.artifacts.markdown_path.read_text(encoding="utf-8")
-    assert markdown.startswith("# The First Chapter")
+    assert markdown.splitlines()[0].startswith("<!-- asoy:document ")
+    assert "# The First Chapter" in markdown
     assert "# The Second Chapter" in markdown
     assert "## A Subsection" in markdown
     assert VERBATIM_SENTENCE in markdown
@@ -245,7 +368,24 @@ def test_text_only_epub_converts_end_to_end(two_chapter_epub: Path, tmp_path: Pa
 
     flattened = result.artifacts.text_path.read_text(encoding="utf-8")
     assert VERBATIM_SENTENCE in flattened
+    assert "<!--" not in flattened
     assert not flattened.startswith("#")
+
+
+def test_the_document_header_records_the_tier_the_job_ran_on(
+    two_chapter_epub: Path, tmp_path: Path
+) -> None:
+    """Invariant 8, as a property of the output file rather than only of the interface."""
+    from asoy.tiers import Tier
+
+    result = convert(two_chapter_epub, tmp_path, tier=Tier.CPU)
+    header = result.artifacts.markdown_path.read_text(encoding="utf-8").splitlines()[0]
+
+    assert result.tier is Tier.CPU
+    assert f'model="{result.model}"' in header
+    # ADR-025 fixes the spelling as part of the contract; Tier is spelled for a human reading the
+    # interface. A consumer parses the header, so the header's spelling is the one that is fixed.
+    assert 'tier="cpu"' in header
 
 
 def test_text_only_odt_converts_without_calibre(tmp_path: Path) -> None:
@@ -256,17 +396,17 @@ def test_text_only_odt_converts_without_calibre(tmp_path: Path) -> None:
     assert result.decision.route is Route.DIRECT
 
     markdown = result.artifacts.markdown_path.read_text(encoding="utf-8")
-    assert markdown.startswith("# The First Chapter")
+    assert "# The First Chapter" in markdown
     assert "# The Second Chapter" in markdown
     assert VERBATIM_SENTENCE in markdown
     assert count_chapter_headings(markdown) == 2
 
 
-def test_no_description_delimiter_is_invented(two_chapter_epub: Path, tmp_path: Path) -> None:
-    """ADR-006: the delimiter is an undefined public interface. Nothing may pre-empt its shape."""
+def test_only_the_defined_delimiter_appears(two_chapter_epub: Path, tmp_path: Path) -> None:
+    """ADR-025 settled one shape. None of the shapes it rejected may appear alongside it."""
     result = convert(two_chapter_epub, tmp_path)
     markdown = result.artifacts.markdown_path.read_text(encoding="utf-8")
-    for shape in ("[[", "]]", "<description", "{{", "::description"):
+    for shape in ("[[", "]]", "<description", "{{", "::description", "```asoy", ":::"):
         assert shape not in markdown
 
 
@@ -300,26 +440,52 @@ def test_calibre_path_fails_loudly_rather_than_silently(
     assert not (tmp_path / "out").exists()
 
 
-def test_document_with_images_is_refused_rather_than_silently_stripped(tmp_path: Path) -> None:
-    """CLAUDE.md section 9: dropping a block gives cleaner output and a dishonest result."""
-    from asoy import orchestrator
-    from asoy.parser import UndescribedBlock
+def test_a_document_with_a_picture_and_a_table_converts(tmp_path: Path) -> None:
+    """ADR-025 lifted the refusal. Nothing is dropped and nothing is silent (invariant 7).
 
-    document = ParsedDocument(
-        source=tmp_path / "book.epub",
-        chapters=(Chapter(title="One", blocks=(Block(BlockKind.PARAGRAPH, "Body."),)),),
-        undescribed=(UndescribedBlock(kind="picture", locator="picture[0]"),),
-    )
-    monkey = tmp_path / "book.epub"
-    build_epub(monkey, [("ch1", CHAPTER_ONE)])
+    A real EPUB carrying a real PNG and a real table, so this exercises Docling's reading order
+    rather than a hand-built document that assumes it.
+    """
+    book = build_epub_with_picture_and_table(tmp_path / "mixed.epub")
+    result = convert(book, tmp_path / "out")
 
-    orchestrator_parse = orchestrator.parse
-    try:
-        orchestrator.parse = lambda _path: document  # type: ignore[assignment]
-        with pytest.raises(ConversionRefused) as excinfo:
-            convert(monkey, tmp_path / "out")
-    finally:
-        orchestrator.parse = orchestrator_parse  # type: ignore[assignment]
+    markdown = result.artifacts.markdown_path.read_text(encoding="utf-8")
+    flattened = result.artifacts.text_path.read_text(encoding="utf-8")
 
-    assert "picture" in str(excinfo.value)
-    assert not (tmp_path / "out").exists()
+    assert result.artifacts.description_count == 2
+    assert result.artifacts.failed_description_count == 1, "the picture; the table was extracted"
+
+    assert 'type="unknown"' in markdown and 'status="failed"' in markdown
+    assert 'type="table"' in markdown and 'status="ok"' in markdown
+    assert "Ada" in markdown and "1843" in markdown
+
+    assert "Before the picture." in flattened
+    assert "could not describe" in flattened
+    assert "After the table." in flattened
+    assert "<!--" not in flattened
+
+
+def test_non_text_blocks_keep_their_place_in_the_real_reading_order(tmp_path: Path) -> None:
+    """A description read out at the wrong moment is worse than the silence it replaced."""
+    book = build_epub_with_picture_and_table(tmp_path / "mixed.epub")
+    flattened = convert(book, tmp_path / "out").artifacts.text_path.read_text(encoding="utf-8")
+
+    positions = [
+        flattened.index("Before the picture."),
+        flattened.index("could not describe"),
+        flattened.index("Between."),
+        flattened.index("A table of"),
+        flattened.index("After the table."),
+    ]
+    assert positions == sorted(positions)
+
+
+def test_the_emitted_markdown_parses_back(tmp_path: Path) -> None:
+    """The round trip, run against a real conversion rather than a constructed document."""
+    from asoy.fences import parse as parse_fences
+    from asoy.fences import render as render_fences
+
+    book = build_epub_with_picture_and_table(tmp_path / "mixed.epub")
+    markdown = convert(book, tmp_path / "out").artifacts.markdown_path.read_text(encoding="utf-8")
+
+    assert render_fences(parse_fences(markdown)) == markdown

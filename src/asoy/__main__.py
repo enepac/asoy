@@ -45,9 +45,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "convert",
         help="convert one book and exit, without opening a window",
         description=(
-            "Convert one book to Markdown and flattened text. Only text-only documents "
-            "convert at this stage; a book containing images or tables is refused rather "
-            "than emitted without them."
+            "Convert one book to Markdown and flattened text. Pictures and tables are marked "
+            "in place; until the description generator exists, a picture is emitted as an "
+            "explicit placeholder rather than being dropped."
         ),
     )
     convert.add_argument("book", type=Path, help="the book to convert")
@@ -84,31 +84,39 @@ def _fail(detail: str, remedy: str = "") -> int:
 def _convert_command(book: Path, output_dir: Path) -> int:
     """Run one conversion. Every failure prints what happened and what to do about it."""
     from asoy.export import OutputVerificationError
+    from asoy.fences import FenceError
     from asoy.orchestrator import ChapterCountMismatch, ConversionRefused, convert
     from asoy.parser import ParseError
     from asoy.router.ebook_convert import CalibreError
 
-    # Invariant 8. Output quality depends on the tier, so a job never runs without naming it.
-    _print_tier()
+    # Invariant 8. Output quality depends on the tier, so a job never runs without naming it, and
+    # the same detection is handed to the conversion so one job cannot report two answers.
+    tier = _print_tier()
     print()
 
     try:
-        result = convert(book, output_dir)
+        result = convert(book, output_dir, tier=tier.tier)
     except (ConversionRefused, CalibreError) as exc:
         return _fail(exc.detail, exc.remedy)
     except ParseError as exc:
         return _fail(str(exc), "A file Docling cannot read cannot be converted.")
-    except (ChapterCountMismatch, OutputVerificationError) as exc:
+    except (ChapterCountMismatch, OutputVerificationError, FenceError) as exc:
         return _fail(
             f"The conversion was abandoned before it could produce a misleading file: {exc}",
             "This is a defect in Asoy, not something you can fix. Please report it.",
         )
 
+    artifacts = result.artifacts
     if result.intermediate is not None:
         print("Converted via Calibre to an intermediate EPUB, then parsed.")
-    print(f"Chapters: {result.artifacts.chapter_count}")
-    print(f"Markdown: {result.artifacts.markdown_path}")
-    print(f"Text:     {result.artifacts.text_path}")
+    print(f"Chapters: {artifacts.chapter_count}")
+    if artifacts.description_count:
+        print(
+            f"Described: {artifacts.description_count} non-text blocks, "
+            f"{artifacts.failed_description_count} marked as placeholders"
+        )
+    print(f"Markdown: {artifacts.markdown_path}")
+    print(f"Text:     {artifacts.text_path}")
     return 0
 
 

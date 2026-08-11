@@ -10,6 +10,7 @@ content and no keys, and nothing here decrypts anything.
 
 from __future__ import annotations
 
+import base64
 import struct
 import zipfile
 from pathlib import Path
@@ -97,6 +98,35 @@ def build_epub(path: Path, chapters: list[tuple[str, str]], *, title: str = "A T
         for href, content in documents.items():
             archive.writestr(f"OEBPS/{href}", content)
 
+    return path
+
+
+# A one-pixel PNG. Small enough to inline, real enough that Docling treats it as a picture rather
+# than discarding it, which is the whole point of the fixture.
+_ONE_PIXEL_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+)
+
+PICTURE_AND_TABLE = """
+<h1>Mixed Chapter</h1>
+<p>Before the picture.</p>
+<img src="pic.png" alt=""/>
+<p>Between.</p>
+<table><thead><tr><th>Name</th><th>Year</th></tr></thead>
+<tbody><tr><td>Ada</td><td>1843</td></tr><tr><td>Grace</td><td>1952</td></tr></tbody></table>
+<p>After the table.</p>
+"""
+
+
+def build_epub_with_picture_and_table(path: Path) -> Path:
+    """An EPUB carrying a real image and a real table, in a known reading order.
+
+    Used to check that non-text blocks keep their position and that a table Docling extracts
+    cleanly is rendered from its cells rather than announced as a gap.
+    """
+    build_epub(path, [("ch1", PICTURE_AND_TABLE)])
+    with zipfile.ZipFile(path, "a") as archive:
+        archive.writestr("OEBPS/pic.png", _ONE_PIXEL_PNG)
     return path
 
 

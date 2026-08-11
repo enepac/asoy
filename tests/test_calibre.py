@@ -224,7 +224,8 @@ def test_kindle_book_converts_through_the_subprocess(
     assert result.source == book
     assert result.intermediate is not None, "the job record must say it went through Calibre"
     markdown = result.artifacts.markdown_path.read_text(encoding="utf-8")
-    assert markdown.startswith("# The First Chapter")
+    assert markdown.splitlines()[0].startswith("<!-- asoy:document ")
+    assert "# The First Chapter" in markdown
     assert result.artifacts.markdown_path.name == "book.md", "output is named for the user's file"
 
 

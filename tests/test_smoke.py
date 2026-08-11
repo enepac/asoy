@@ -23,8 +23,10 @@ import asoy
 from asoy.__main__ import main
 from asoy.shell import ShellApi, run_window
 
-# One entry per component in ARCHITECTURE section 4, plus tier detection from section 5.
+# One entry per component in ARCHITECTURE section 4, plus tier detection from section 5 and the
+# output contract from 4.8, which lives in its own module because it is a public interface.
 COMPONENT_MODULES = [
+    "asoy.fences",
     "asoy.shell",
     "asoy.orchestrator",
     "asoy.router",

@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
-MAX_HEADING_LEVEL = 6
+from asoy.fences import MAX_HEADING_LEVEL, DescriptionType
 
 # Docling labels that carry a chapter-level heading. An EPUB's <h1> arrives as "title".
 _CHAPTER_LABELS = frozenset({"title"})
@@ -29,19 +29,42 @@ _SECTION_LABELS = frozenset({"section_header"})
 # Labels that carry no author prose and would add noise to a narration.
 _SKIPPABLE_LABELS = frozenset({"page_header", "page_footer"})
 
+# Non-text labels, which become descriptions rather than being dropped (invariant 7).
+_PICTURE_LABEL = "picture"
+_TABLE_LABEL = "table"
+
 
 class BlockKind(StrEnum):
     HEADING = "heading"
     PARAGRAPH = "paragraph"
+    NON_TEXT = "non_text"
+
+
+@dataclass(frozen=True)
+class NonText:
+    """A block carrying no author prose: a picture, a table, a chart.
+
+    `type` is what the block classifier would assign. It does not exist yet, so a picture arrives
+    as `unknown` rather than being guessed at — the closed set has a member for not knowing, and
+    using it is more honest than asserting `illustration` on no evidence.
+
+    `table` carries the cells when Docling extracted them cleanly, so the assembler can render the
+    structure rather than sending a picture of a table to a vision model (section 4.6).
+    """
+
+    type: DescriptionType
+    locator: str
+    table: tuple[tuple[str, ...], ...] | None = None
 
 
 @dataclass(frozen=True)
 class Block:
-    """One emitted unit of author text."""
+    """One emitted unit: author text, or a non-text block awaiting a description."""
 
     kind: BlockKind
-    text: str
+    text: str = ""
     level: int = 0
+    non_text: NonText | None = None
 
 
 @dataclass(frozen=True)
@@ -57,20 +80,11 @@ class Chapter:
 
 
 @dataclass(frozen=True)
-class UndescribedBlock:
-    """A non-text block that would need a generated description before it can be emitted."""
-
-    kind: str
-    locator: str
-
-
-@dataclass(frozen=True)
 class ParsedDocument:
     """The parsed book."""
 
     source: Path
     chapters: tuple[Chapter, ...]
-    undescribed: tuple[UndescribedBlock, ...]
 
     @property
     def chapter_count(self) -> int:
@@ -83,6 +97,16 @@ class ParsedDocument:
     @property
     def block_count(self) -> int:
         return sum(len(chapter.blocks) for chapter in self.chapters)
+
+    @property
+    def non_text_blocks(self) -> tuple[NonText, ...]:
+        """Every non-text block, in reading order. What the review UI will list."""
+        return tuple(
+            block.non_text
+            for chapter in self.chapters
+            for block in chapter.blocks
+            if block.non_text is not None
+        )
 
 
 class ParseError(RuntimeError):
@@ -103,21 +127,35 @@ def _heading_level(item: object) -> int:
     return max(1, level)
 
 
-def _to_blocks_and_chapters(items: list[tuple[str, str, int]]) -> tuple[Chapter, ...]:
-    """Segment a flat, ordered list of (label, text, level) into chapters."""
-    has_chapter_label = any(label in _CHAPTER_LABELS for label, _, _ in items)
+@dataclass(frozen=True)
+class _Item:
+    """One item from Docling, still in document order and not yet segmented into chapters."""
+
+    label: str
+    text: str = ""
+    level: int = 1
+    non_text: NonText | None = None
+
+
+def _to_blocks_and_chapters(items: list[_Item]) -> tuple[Chapter, ...]:
+    """Segment a flat, ordered list of items into chapters."""
+    has_chapter_label = any(item.label in _CHAPTER_LABELS for item in items)
 
     # Fall back to the shallowest section heading when a book has no top-level title items, so a
     # book whose chapters are marked up as <h2> still segments instead of collapsing into one.
     fallback_level = 0
     if not has_chapter_label:
-        section_levels = [level for label, _, level in items if label in _SECTION_LABELS]
+        section_levels = [item.level for item in items if item.label in _SECTION_LABELS]
         fallback_level = min(section_levels) if section_levels else 0
 
-    def starts_chapter(label: str, level: int) -> bool:
+    def starts_chapter(item: _Item) -> bool:
         if has_chapter_label:
-            return label in _CHAPTER_LABELS
-        return bool(fallback_level) and label in _SECTION_LABELS and level == fallback_level
+            return item.label in _CHAPTER_LABELS
+        return (
+            bool(fallback_level)
+            and item.label in _SECTION_LABELS
+            and item.level == fallback_level
+        )
 
     chapters: list[Chapter] = []
     title: str | None = None
@@ -127,19 +165,23 @@ def _to_blocks_and_chapters(items: list[tuple[str, str, int]]) -> tuple[Chapter,
         if title is not None or blocks:
             chapters.append(Chapter(title=title, blocks=tuple(blocks)))
 
-    for label, text, level in items:
-        if starts_chapter(label, level):
+    for item in items:
+        if item.non_text is not None:
+            blocks.append(Block(kind=BlockKind.NON_TEXT, non_text=item.non_text))
+            continue
+
+        if starts_chapter(item):
             flush()
-            title = text
+            title = item.text
             blocks = []
             continue
 
-        if label in _SECTION_LABELS:
-            depth = min(level + 1, MAX_HEADING_LEVEL)
-            blocks.append(Block(kind=BlockKind.HEADING, text=text, level=depth))
+        if item.label in _SECTION_LABELS:
+            depth = min(item.level + 1, MAX_HEADING_LEVEL)
+            blocks.append(Block(kind=BlockKind.HEADING, text=item.text, level=depth))
             continue
 
-        blocks.append(Block(kind=BlockKind.PARAGRAPH, text=text))
+        blocks.append(Block(kind=BlockKind.PARAGRAPH, text=item.text))
 
     flush()
     return tuple(chapters)
@@ -196,29 +238,66 @@ def _extract(path: Path, result: object) -> ParsedDocument:
         raise ParseError(f"Docling reported status {status} for {path} ({errors}).")
 
     document = result.document
-    items: list[tuple[str, str, int]] = []
+    items: list[_Item] = []
+    pictures = 0
+    tables = 0
+
     for item, _depth in document.iterate_items(with_groups=False):
         label = _label_of(item)
         if label in _SKIPPABLE_LABELS:
             continue
+
+        # Non-text blocks are carried in reading order rather than counted separately, because
+        # their position is the whole point: a description read out at the wrong moment is worse
+        # than the silence it replaced (section 4.7).
+        if label == _PICTURE_LABEL:
+            items.append(
+                _Item(
+                    label=label,
+                    non_text=NonText(
+                        type=DescriptionType.UNKNOWN, locator=f"picture[{pictures}]"
+                    ),
+                )
+            )
+            pictures += 1
+            continue
+
+        if label == _TABLE_LABEL:
+            items.append(
+                _Item(
+                    label=label,
+                    non_text=NonText(
+                        type=DescriptionType.TABLE,
+                        locator=f"table[{tables}]",
+                        table=_table_cells(item),
+                    ),
+                )
+            )
+            tables += 1
+            continue
+
         text = getattr(item, "text", None)
         if text is None or not str(text).strip():
             continue
-        items.append((label, str(text), _heading_level(item)))
+        items.append(_Item(label=label, text=str(text), level=_heading_level(item)))
 
-    undescribed = tuple(
-        [
-            UndescribedBlock(kind="picture", locator=f"picture[{index}]")
-            for index in range(len(getattr(document, "pictures", []) or []))
-        ]
-        + [
-            UndescribedBlock(kind="table", locator=f"table[{index}]")
-            for index in range(len(getattr(document, "tables", []) or []))
-        ]
-    )
+    return ParsedDocument(source=path, chapters=_to_blocks_and_chapters(items))
 
-    return ParsedDocument(
-        source=path,
-        chapters=_to_blocks_and_chapters(items),
-        undescribed=undescribed,
+
+def _table_cells(item: object) -> tuple[tuple[str, ...], ...] | None:
+    """The table's cells as rows of strings, or None if Docling did not extract it cleanly.
+
+    "Cleanly" is the test ARCHITECTURE 4.6 needs: a table whose structure came through is
+    rendered from that structure, and one that did not becomes a description like any other
+    picture. A half-extracted table rendered as if it were whole is the worst of the three.
+    """
+    grid = getattr(getattr(item, "data", None), "grid", None)
+    if not grid:
+        return None
+
+    rows = tuple(
+        tuple(str(getattr(cell, "text", "") or "").strip() for cell in row) for row in grid
     )
+    if not any(any(cell for cell in row) for row in rows):
+        return None
+    return rows

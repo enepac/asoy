@@ -28,6 +28,8 @@ class WrittenArtifacts:
     markdown_path: Path
     text_path: Path
     chapter_count: int
+    description_count: int = 0
+    failed_description_count: int = 0
 
 
 def _write_and_verify(path: Path, content: str) -> None:
@@ -50,6 +52,8 @@ def write(rendered: RenderedDocument, output_dir: Path, stem: str) -> WrittenArt
     _write_and_verify(markdown_path, rendered.markdown)
     _write_and_verify(text_path, rendered.plain_text)
 
+    # Counted by parsing the file back, not by scanning it. Since ADR-025 a `#` at the start of a
+    # line may be the author's, wrapped in a text fence, and counting it would fail a correct job.
     on_disk = count_chapter_headings(markdown_path.read_text(encoding=ENCODING))
     if on_disk != rendered.titled_chapter_count:
         raise OutputVerificationError(
@@ -61,4 +65,6 @@ def write(rendered: RenderedDocument, output_dir: Path, stem: str) -> WrittenArt
         markdown_path=markdown_path,
         text_path=text_path,
         chapter_count=rendered.chapter_count,
+        description_count=rendered.description_count,
+        failed_description_count=rendered.failed_description_count,
     )

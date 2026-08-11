@@ -107,6 +107,38 @@ Occasionally the model fails on a block. When that happens Asoy writes an explic
 
 ---
 
+## What the output looks like
+
+Two files per book. A `.md`, which is the real one, and a `.txt` derived from it.
+
+In the `.md`, every description of a picture, table, chart, or diagram is wrapped in a marker:
+
+```
+<!-- asoy:description type="chart" confidence="0.82" status="ok" -->
+A line chart rising steadily from left to right.
+<!-- /asoy:description -->
+```
+
+These are HTML comments, so they are invisible if you open the file in anything that renders Markdown — the book reads as a book. They are there so a narration pipeline can read descriptions in a second voice, pause before them, or skip them entirely. If you are building one, that marker's shape is a promise: it will not change without a major version.
+
+`confidence` is a rough internal score for sorting which descriptions are worth checking. **It is not a probability.** `0.80` does not mean right eight times in ten.
+
+`status="failed"` means Asoy could not describe that element and has left a spoken placeholder in its place, so you hear that something was there rather than hearing nothing.
+
+Occasionally you will see a marker around the author's own text:
+
+```
+<!-- asoy:text -->
+# A line the author began with a hash.
+<!-- /asoy:text -->
+```
+
+That means the author's text would have been mistaken for a heading or a list. Asoy marks it rather than altering it — it will never add a backslash or any other character to what the author wrote, because those characters get read aloud.
+
+The `.txt` has all of this stripped out: descriptions become ordinary prose, headings become plain lines, and none of Asoy's own syntax survives.
+
+---
+
 ## Supported formats
 
 **Works well:** EPUB, DOCX, ODT, HTML, plain text.

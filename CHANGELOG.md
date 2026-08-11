@@ -74,8 +74,10 @@ the convention above. It becomes dated when the release actually ships.
 
 ### Output
 
-- Markdown is the canonical output format, preserving chapter structure as headings, with every generated description wrapped in an explicit delimiter carrying its type and confidence.
-- A flattened plain-text export is produced alongside it, with descriptions inline as ordinary prose.
+- Markdown is the canonical output format, preserving chapter structure as headings, with every generated description wrapped in an HTML comment fence carrying its type, confidence, and status — invisible when rendered, and parseable by a narration pipeline that wants to switch voice or skip descriptions.
+- Every file opens with a header recording the hardware tier and model that produced it, so two conversions that read differently can always be told apart.
+- Author text is never escaped. Where a line would be mistaken for Markdown structure it is marked rather than altered, because an inserted backslash is a character a narrator reads aloud.
+- A flattened plain-text export is produced alongside it, with descriptions inline as ordinary prose and none of the markers.
 - Shipped models: **GPU tier** Qwen3-VL-4B (Q4). **CPU tier** Moondream 2.
 
 ### Privacy
