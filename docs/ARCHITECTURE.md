@@ -171,7 +171,19 @@ The header is the first line of every `.md` and records the tier and model the j
 
 **`confidence` is an uncalibrated heuristic, not a probability.** It is derived from the model's response and the block's classification certainty, and its purpose is to order descriptions by how much they are worth reviewing. It has never been calibrated against ground truth: `0.80` does not mean eight times in ten.
 
-**`source` is what makes `confidence` comparable.** A table rendered from its own cells (section 4.6) carries `1.00` because nothing about it was uncertain; a chart the vision model scored highly carries a number that came from a heuristic. Both are `1.00` and they are not the same claim, so a consumer ordering descriptions by how much they need a human must read the two attributes together. It names the route rather than who wrote the characters: a `failed` description is `source="model"`, because the model path was responsible and did not deliver.
+**`source` is what makes `confidence` comparable.** A table rendered from its own cells (section 4.6) carries `1.00` because nothing about it was uncertain; a chart the vision model scored highly carries a number that came from a heuristic. Both are `1.00` and they are not the same claim, so a consumer ordering descriptions by how much they need a human must read the two attributes together.
+
+**`source` names the route the description was meant to come from, not who typed the characters in the body.** A `failed` description carries `source="model"` even though its placeholder text was written by Asoy and no model produced anything — the model path was responsible for that block and did not deliver.
+
+**`status` and `source` are read together**, and neither is complete alone:
+
+| `status` | `source` | What it means |
+|---|---|---|
+| `ok` | `structure` | Read directly off the block's own structure. Exact; nothing to review |
+| `ok` | `model` | A vision model described it. An estimate, ordered for review by `confidence` |
+| `failed` | `model` | The model path was responsible and produced nothing usable. The body is a placeholder |
+
+`failed` with `structure` is legal in the format and is never emitted. A table whose structure does not extract cleanly falls through to the model path rather than ending there, so it carries `source="model"` like any other picture.
 
 **Author text is never escaped.** A backslash inserted to tame a Markdown metacharacter is a character a naive engine reads aloud. Where a block would otherwise be read as structure — a line beginning with `#`, `>`, a list marker, a pipe — it is wrapped in `asoy:text` instead. The fence appears only where it is needed. The only characters Asoy adds to an emitted file are the markers and the `#` of a heading.
 

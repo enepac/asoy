@@ -78,9 +78,11 @@ class DescriptionSource(StrEnum):
     uncertain about, the other was a heuristic that happened to score well. Without this
     attribute a consumer sorting by confidence mixes the two.
 
-    It names the route, not who typed the characters. A `failed` description is `model`, because
-    the model path is the one that was responsible and did not deliver — `status` says what
-    happened, `source` says where it was meant to come from.
+    **It names the route the description was meant to come from, not who typed the characters in
+    the body.** A `failed` description is `model` even though Asoy wrote the placeholder text and
+    no model produced anything: the model path was responsible for that block and did not
+    deliver. `status` says what happened, `source` says where it was meant to come from, and the
+    two are read together. See the amendment to ADR-025 for the combinations and their meanings.
     """
 
     STRUCTURE = "structure"

@@ -99,6 +99,39 @@ def test_attributes_are_always_all_four_in_order() -> None:
                 assert f'source="{source.value}"' in line
 
 
+def test_a_failed_description_names_the_route_not_the_author_of_the_placeholder() -> None:
+    """`source` names where the description was meant to come from, not who typed the body.
+
+    The obvious reading is the wrong one, so it is pinned here: a failed description carries
+    `source="model"` even though Asoy wrote the placeholder text and no model produced anything.
+    The model path was responsible for that block and did not deliver. Without this test the
+    interpretation drifts the first time someone reads the attribute name and reasons from it.
+    """
+    failed = _description(
+        status=DescriptionStatus.FAILED,
+        source=DescriptionSource.MODEL,
+        confidence=0.0,
+        body="A chart appears here that Asoy could not describe.",
+    )
+    line = render(_document(failed)).splitlines()[2]
+
+    assert 'status="failed"' in line
+    assert 'source="model"' in line
+    assert parse(render(_document(failed))).segments == (failed,)
+
+
+def test_status_and_source_are_independent_attributes() -> None:
+    """Every combination survives the round trip, including the one Asoy does not emit.
+
+    The format is not narrowed to what the pipeline happens to produce today. A consumer parsing
+    a file from a later version must not be broken by a combination that becomes reachable.
+    """
+    for status in DescriptionStatus:
+        for source in DescriptionSource:
+            segment = _description(status=status, source=source)
+            assert parse(render(_document(segment))).segments == (segment,)
+
+
 def test_source_separates_two_descriptions_that_share_a_confidence() -> None:
     """The ambiguity this attribute exists to remove.
 

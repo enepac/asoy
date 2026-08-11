@@ -297,6 +297,37 @@ def test_a_table_docling_could_not_extract_becomes_a_placeholder() -> None:
     assert 'status="failed"' in rendered.markdown
 
 
+def test_every_placeholder_the_assembler_emits_names_the_model_route() -> None:
+    """The interpretation ADR-025 settled, pinned at the point that produces it.
+
+    `source` names the route the description was meant to come from, not who wrote the body. Asoy
+    writes the placeholder text; the model path is what failed to fill it. A future reader
+    reasoning from the attribute name alone would set `structure` here, and this fails if they do.
+    """
+    for kind in DescriptionType:
+        markdown = _render(_document(Chapter(title=None, blocks=(_picture(kind),)))).markdown
+        assert 'status="failed"' in markdown
+        assert 'source="model"' in markdown
+
+
+def test_a_table_that_did_not_extract_falls_through_to_the_model_route() -> None:
+    """Not a dead end, so not `failed` with `structure`.
+
+    A table Docling could not extract is a picture of a table, and describing it is the vision
+    model's job. Marking it `source="structure"` would say the structural route owned it and
+    failed, which would tell a consumer there is nothing left to try.
+    """
+    block = Block(
+        kind=BlockKind.NON_TEXT,
+        non_text=NonText(type=DescriptionType.TABLE, locator="table[0]", table=None),
+    )
+    markdown = _render(_document(Chapter(title="One", blocks=(block,)))).markdown
+
+    assert 'status="failed"' in markdown
+    assert 'source="model"' in markdown
+    assert 'source="structure"' not in markdown
+
+
 def test_every_description_type_has_a_readable_placeholder() -> None:
     """A missing entry would be a KeyError mid-conversion, on a book that reached the end."""
     for kind in DescriptionType:

@@ -559,7 +559,21 @@ The `.md` and `.txt` are both rendered from one document object, and the module 
 
 **Why.** The decision above rendered a cleanly extracted table from its cells at `confidence="1.00"`, on the reasoning that nothing about it was uncertain. That is sound and it made 1.00 mean two different things: a table read straight off its own structure, and a vision model that happened to score well. A consumer sorting by confidence to decide what a human should review would have mixed them, and the ordering would have been silently wrong rather than visibly wrong.
 
-`source` says which path produced the description, which is what makes `confidence` comparable at all. It **names the route, not who typed the characters**: a `failed` description carries `source="model"`, because the model path is the one that was responsible and did not deliver. `status` says what happened; `source` says where it was meant to come from. Together they let a consumer decide whether re-running the block could help.
+`source` says which path produced the description, which is what makes `confidence` comparable at all.
+
+**What `source` means, stated plainly because the obvious reading is the wrong one.** It names **the route the description was meant to come from, not who typed the characters in the body**. A `failed` description carries `source="model"` even though the placeholder text in it was written by Asoy and no model ran at all — the model path is the one that was responsible for that block and did not deliver.
+
+**`status` and `source` are read together.** Neither is complete alone:
+
+| `status` | `source` | What it means |
+|---|---|---|
+| `ok` | `structure` | Read directly off the block's own structure. Exact. Nothing to review |
+| `ok` | `model` | A vision model described it. An estimate; `confidence` orders these for review |
+| `failed` | `model` | The model path was responsible and produced nothing usable. The body is a placeholder |
+
+A consumer deciding whether re-running a block could help needs both: `status` says what happened, `source` says where it was meant to come from, and `failed` plus `model` is the combination worth another attempt.
+
+The fourth combination, `failed` with `structure`, is legal in the format and Asoy never emits it. A table whose structure does not extract cleanly is not a dead end — it falls through to the model path, and so it is `source="model"` like any other picture. Nothing became responsible for it that then failed.
 
 This is additive, so it is MINOR-compatible under ADR-006, and it costs nothing today because no consumer exists. That is precisely why it is worth doing now: the same fix after someone has integrated is a coordination problem rather than an edit.
 
