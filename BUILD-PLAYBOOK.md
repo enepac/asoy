@@ -95,11 +95,13 @@ That is the line Asoy actually shipped with, and it is the wrong shape. Read the
 
 **A status line is not written once. It is the one line in the document guaranteed to go stale, because it is the only line about the present.** Asoy's said "no application code exists yet" through five commits that added application code. Nothing flagged it: every commit updated the sections it touched, exactly as the convention required, and the header was not a section anybody touched.
 
-Three things follow.
+Four things follow.
 
 **Say what exists, not what does not.** "No implementation exists yet" has one true moment and is wrong forever after. A line naming which components are built and which are not stays useful as the answer changes, and it is obviously stale when it is, because a reader can check it against the tree.
 
 **Give the document a "last verified against code" date.** An undated claim about the present is unfalsifiable. A dated one invites the check.
+
+**Write the claim in the past tense.** Present tense breaks on the next change; past tense ages. A row reading *in sync with `origin/main` at `2abb065`* is a claim about now and is false the moment either side moves. The same fact as *`origin/main` was at `2abb065` when this was verified* stays true forever, and a reader comparing it to the tree learns the file's age instead of finding a lie. The symptom that exposed it: three consecutive pushes, each needing a correcting commit to that one row. **A line that needs fixing on a schedule is a line written in the wrong tense.**
 
 **Sweep for the claim, do not fix the file you noticed.** The same sentence gets copied into every document in the set, and into the playbook that recommended it. Grep the phrase across the repository and fix every instance in one commit, or the next session finds the copy you missed and reasons from it.
 
