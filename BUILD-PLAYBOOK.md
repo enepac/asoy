@@ -294,6 +294,7 @@ The same test applies to trigger lists. Asoy's `STATE.md` names three triggers a
 | Tier detection asked a library, not the hardware | Ask the question you mean |
 | A decision log entry referenced text that did not exist | Cross-references are checkable; check them |
 | An access limit was asserted without checking the mechanism that actually applied | Test the access before describing it. "I cannot see your files" was written into the method and outlived the sync that made it false |
+| A handoff instructed an edit that broke a convention the same surface had recorded two commits earlier | The handoff asks the routing question before it is issued — new entry, or amendment? The planning surface holds the conventions and is the one that can answer it; leaving it to be discovered at execution turns every instance into a round trip. Executing and flagging was right here because the edit was reversible and the original text was preserved. Abort instead when it is not |
 
 ---
 

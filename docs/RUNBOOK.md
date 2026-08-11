@@ -169,7 +169,7 @@ Anything not in this table and reproducible goes to `INCIDENTS.md` after resolut
 uv run pytest tests/test_classifier_reference.py -m reference -s
 ```
 
-It needs Ollama running with the tier's model pulled, makes one vision call per block, and is excluded from the default suite for both reasons. It prints a confusion matrix and asserts the ADR-026 bar: cross-family confusion at or below 5%, and wrong abstentions at or below 20% of the blocks whose expected answer is a real type.
+It needs Ollama running with the tier's model pulled, makes one vision call per block, and is excluded from the default suite for both reasons. It prints a confusion matrix and asserts the bar from ADR-026 and ADR-027: cross-family confusion at or below 5%, and wrong abstentions at or below 20% of the blocks whose expected answer is a real type.
 
 Three figures are printed and not capped. Within-family confusion, the all-abstentions rate, and the abstention rate on the deliberately-ambiguous blocks. **Read the last one as a signal rather than a score**: low means the classifier is guessing where a guess is not supported, which raises accuracy while being the behaviour ADR-026 rejects.
 

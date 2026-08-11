@@ -13,10 +13,10 @@
 | | |
 |---|---|
 | Version | 0.1.0 (`pyproject.toml`, confirmed by `asoy --version`) |
-| Branch / commit | `main` at `0890246`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
-| Push state | In sync with `origin/main` at `0890246`, and one ahead of it until the commit carrying this line is itself pushed. **State the sync point, never a count** — a count is wrong the moment either side moves, and this line has gone stale twice that way |
-| Tests | 294 passing, 2 deselected (fences 59, classifier 41, environment 36, pipeline 38, classifier-reference 30 of which 2 need Ollama, tiers 26, router 24, smoke 22, calibre 20) |
-| Highest ADR | ADR-026 |
+| Branch / commit | `main` at `85424b8`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
+| Push state | `origin/main` was at `2abb065` when this was verified, behind the local branch above. Anything reading this repository from GitHub sees that commit, not the one in the row above. **State the sync point, never a count** — a count is wrong the moment either side moves, and this line has gone stale twice that way |
+| Tests | 297 passing, 2 deselected (fences 59, classifier 41, environment 36, pipeline 38, classifier-reference 33 of which 2 need Ollama, tiers 26, router 24, smoke 22, calibre 20) |
+| Highest ADR | ADR-027 |
 | Dependency tree | 117 packages resolved; license scan shows no GPL-family or AGPL entry |
 | Release | None. No installer, no signing, no users |
 
@@ -60,7 +60,7 @@ Each line names the command that proves it. All were run.
 - **GPU-tier conversion speed is not what `ARCHITECTURE` §5 implies** (ADR-021). The tier delivers better descriptions but not faster conversion; the layout pass and OCR both run on CPU. Unmeasured, and no benchmark exists because no full conversion has been timed.
 - **The parser depends on a private Docling attribute** to close the source file (ADR-024). A Docling upgrade breaks it silently by design; two named tests are the only guard.
 - **Every picture in every book currently converts to a placeholder.** The output is honest and it is not useful yet. This is the single largest gap between what Asoy does and what it is for.
-- **The classifier's accuracy is unmeasured.** `reference/classifier/` is empty — the public-domain books are being gathered — so no acceptance number in ADR-026 has been measured against anything. The harness runs and the acceptance test skips loudly rather than passing on no evidence.
+- **The classifier's accuracy is unmeasured.** `reference/classifier/` is empty — the public-domain books are being gathered — so no acceptance number in ADR-026 or ADR-027 has been measured against anything. The harness runs and the acceptance test skips loudly rather than passing on no evidence.
 - **The classification prompt is unratified.** It is isolated in `src/asoy/classifier/prompt.py` and marked, and `CLAUDE.md` §5 treats prompts as ask-first. It has never been compared against an alternative.
 - **`CERTAINTY_FLOOR` is a placeholder, not a considered value.** It moves the measured `unknown` rate almost directly and should be set from the reference set once that exists.
 - **One input cannot be represented**: author text containing a line that is exactly `<!-- /asoy:text -->`. It raises and writes nothing rather than emitting a file that misparses itself (ADR-025). Requires a book to contain Asoy's own closing marker verbatim.

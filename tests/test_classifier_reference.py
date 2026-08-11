@@ -1,4 +1,4 @@
-"""The classifier's measurement harness (ADR-026).
+"""The classifier's measurement harness (ADR-026, and the abstention bar of ADR-027).
 
 Two kinds of test live here, and keeping them apart matters.
 

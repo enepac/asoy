@@ -1,4 +1,4 @@
-"""The classifier's measurement harness (ADR-026, RUNBOOK section 9).
+"""The classifier's measurement harness (ADR-026, ADR-027, RUNBOOK section 9).
 
 The reference set is the instrument that decides whether a change to this component is an
 improvement. Without it, "it reads better to me" is the only available evidence, and CLAUDE.md
@@ -36,7 +36,7 @@ MANIFEST_VERSION = 1
 
 EXTENSION_ENV_VAR = "ASOY_REFERENCE_EXTENSION"
 
-# The acceptance bar, measured on the committed core only (ADR-026).
+# The acceptance bar, measured on the committed core only (ADR-026, narrowed by ADR-027).
 #
 # Cross-family means a pictorial block called graphical or the reverse — a photograph called a
 # chart. It is capped tightly because it is the failure that selects a wholly wrong description
@@ -58,6 +58,7 @@ MAX_CROSS_FAMILY_RATE = 0.05
 # to protect. The all-abstentions rate is still reported, as context rather than as a bar.
 #
 # 20% is a considered starting point and not a measured one, and it moves with CERTAINTY_FLOOR.
+# See ADR-027, which is where this bar is decided; ADR-026 carries the one it narrowed.
 MAX_WRONGLY_UNKNOWN_RATE = 0.20
 
 # Which types are near-substitutes for each other. Confusion inside a family is a smaller error

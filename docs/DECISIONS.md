@@ -617,7 +617,7 @@ It is derived from named evidence rather than from a model's opinion of itself. 
 
 - Cross-family confusion at or below 5%. Cross-family means a photograph or illustration called a diagram or chart, or the reverse — the failure that selects a wholly wrong description approach.
 - Within-family confusion (photograph against illustration, diagram against chart) recorded in a confusion matrix, uncapped for v1. Both members of a pair receive broadly similar description treatment, so the cost is real and much smaller.
-- `unknown` at or below 25%. Above that the model call is not earning its cost and the pre-pass should be doing more. *(Replaced the same day — see the amendment below.)*
+- `unknown` at or below 25%. Above that the model call is not earning its cost and the pre-pass should be doing more. *(Narrowed the same day by ADR-027, which counts wrong abstentions against the typed blocks rather than every abstention against the whole set.)*
 
 **Rejected.**
 - *A dedicated ONNX image classifier* — better at the task, and it adds weights to an installer whose size is already a documented expectation. Revisit with a benchmark.
@@ -634,7 +634,12 @@ It is derived from named evidence rather than from a model's opinion of itself. 
 
 On the 20% wrong-abstention bar and on `CERTAINTY_FLOOR`: **the first measured run against the core set**, which may move either number, in either direction, and should be expected to move at least one. They are a considered pair, not an evidenced one, and the run that first produces evidence is the run that settles them.
 
-### Amendment, 2026-08-10 — the abstention bar counts wrong abstentions, not all of them
+### Amendment, 2026-08-10 — superseded by ADR-027, and kept as the record of a misplaced one
+
+> **This was written as an in-place amendment and should not have been.** The header's amendment
+> rule allows in-place amendment only when the change is purely additive, and replacing a
+> threshold narrows a decision. **The decision now lives in ADR-027**, which is the authority;
+> everything below is retained because erasing it would erase the mistake along with it.
 
 *The original bullet above is left in place. It is wrong in a way worth keeping, because the error is arithmetic rather than a matter of judgement and is easy to make again.*
 
@@ -649,6 +654,37 @@ On the 20% wrong-abstention bar and on `CERTAINTY_FLOOR`: **the first measured r
 **20% is a considered starting point, not a measured one.** It moves with `CERTAINTY_FLOOR`, which is itself a placeholder — the floor sets how often the classifier abstains, so the two are one decision expressed twice and have to be set together against the same evidence. Neither has been.
 
 **Would reverse this.** The first measured run against the core set, which may move either number in either direction and should be expected to move at least one.
+
+---
+
+## ADR-027 - The classifier's abstention bar counts wrong abstentions, not all of them
+
+**Date:** 2026-08-10 · **Status:** Accepted. Narrows the third acceptance-bar bullet in ADR-026; the rest of that decision stands.
+
+**Decision.** The abstention figure the acceptance bar caps is **wrong abstentions at or below 20%, measured against the core blocks whose expected answer is a real type** — roughly 50 of the 60, not all of them. Above that the model call is not earning its cost and the pre-pass should be doing more.
+
+Two further figures are recorded and reported, and neither is a bar:
+
+- **The all-abstentions rate**, every block answered `unknown` over the whole set. Context.
+- **The abstention rate on the ambiguous blocks**, uncapped for v1 — ten blocks cannot carry a threshold. It is read as a signal rather than a score: a low number there means the classifier is guessing on blocks that do not support a guess, which no other figure reveals, since guessing right occasionally raises accuracy while being the behaviour ADR-026's third decision rejects.
+
+**Why.** ADR-026 capped every abstention against the whole set at 25%. The core holds about ten deliberately-ambiguous blocks whose correct answer *is* `unknown`, so a classifier that answered every one of them correctly and made no other mistake already read about 17% — leaving roughly 8% of the budget for actual errors.
+
+That is not a tight bar, it is a miscounted one. It charged the classifier for exactly the behaviour ADR-026 was written to protect, and the interaction would have worsened on its own: enlarging the ambiguous group to measure abstention more thoroughly would have tightened the bar on everything else. Measuring wrong abstentions against the typed blocks removes the interaction entirely, and the ambiguous group can then be any size without moving the number.
+
+**20% is a considered starting point, not a measured one.** It moves with `CERTAINTY_FLOOR`, which is itself a placeholder — the floor sets how often the classifier abstains, so the two are one decision expressed twice and have to be set together against the same evidence. Neither has been.
+
+**Rejected.**
+- *The original bar: all abstentions at or below 25% of the whole set* — the entry this one narrows. Simpler to state and simpler to compute, and it penalises correct abstentions, which makes a classifier that guesses on ambiguous blocks score better than one that does not.
+- *Keeping 25% but excluding ambiguous blocks from the set entirely* — would fix the arithmetic and lose the only measurement of whether the classifier abstains when it should. Those blocks are the ones that test ADR-026's third decision, and dropping them would make that decision unmeasurable.
+- *Capping the ambiguous-group abstention rate too* — ten blocks cannot carry a threshold; one entry either way moves it ten points. It is reported and read, not scored.
+- *Amending ADR-026 in place instead of writing this entry* — attempted, and wrong. The header's amendment rule allows in-place amendment only when purely additive, and replacing a threshold narrows a decision. See the consequences below.
+
+**Consequences.** This decision was first written as an in-place amendment to ADR-026 and lifted out into its own entry the same day. The amendment block in ADR-026 is left where it was, with the original 25% bullet intact above it, and now points here.
+
+A clause was proposed for the amendment rule, exempting thresholds that have not yet been measured. It is rejected: nearly every threshold in this log is unmeasured when it is written, so the clause would have become a second default rather than an exception, and the rule would have permitted in-place edits to most of the decisions in the file.
+
+**Would reverse this.** The first measured run against the core set, which may move either the 20% bar or `CERTAINTY_FLOOR`, in either direction, and should be expected to move at least one. They are a considered pair, not an evidenced one, and the run that first produces evidence is the run that settles them.
 
 ---
 
