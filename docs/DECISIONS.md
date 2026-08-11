@@ -734,7 +734,11 @@ The manifest carries a `rotated` flag so the confusion matrix can be read both w
 
 `table` joins the graphical family in the harness, alongside `diagram` and `chart`. On the merits a table and a chart both present data, so confusing them costs about what confusing a diagram for a chart costs. It also has to belong to a family at all: a type in neither family is counted as neither cross-family nor within-family confusion, so a chart called a table would have lowered accuracy while leaving the capped bar untouched — and the reversal condition below asks exactly that question.
 
-The core set now needs `table` entries. Without them the risk this decision introduces is measurable and the benefit is not: the reversal condition weighs charts-called-tables against scanned-tables-typed-correctly, and the second term is unmeasurable if no core block expects `table`.
+The core set gains a `table` group of about 10 scanned-table blocks, taking it to roughly 70. Without them the risk this decision introduces is measurable and the benefit is not: the reversal condition weighs charts-called-tables against scanned-tables-typed-correctly, and the second term is unmeasurable if no core block expects `table`. **Both bars are rates**, over all blocks and over the typed blocks respectively, so growing the set changes their denominators and neither threshold — no re-derivation is required. The group draws from at least two sources, per ruling 5 and for the same reason: one scanner's rendering of ruled lines is not the general case. Entries are pictures of tables only; a structurally-extracted table is typed by the parser and never reaches the classifier.
+
+Chart-against-table confusion is reported on its own named line, in both directions, alongside the count of scanned tables typed correctly. It is a subset of within-family and within-family is uncapped, so buried in that total the exact quantity this decision's reversal turns on would accumulate without ever appearing in the report.
+
+**The prompt's `table` line is unratified**, along with the rest of `prompt.py`. Re-admitting the label without describing it would have been worse than describing it provisionally, but the wording has not been approved and has not been measured, and it is not to be read as settled because a decision cites it.
 
 The classifier's `unknown` answer now competes with `table` on scanned tables, which are visually close to some charts. The reversal condition below is aimed squarely at that.
 

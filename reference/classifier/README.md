@@ -12,8 +12,8 @@ directory holds the core set, and the acceptance test skips rather than reportin
 
 ## What goes in the core
 
-Committed to this repository, so it must be public domain. About 60 picture blocks drawn from at
-least four distinct books:
+Committed to this repository, so it must be public domain. About 70 picture blocks drawn from at
+least four distinct sources:
 
 | Expected type | Roughly |
 |---|---|
@@ -21,10 +21,26 @@ least four distinct books:
 | `illustration` | 12–15 |
 | `diagram` | 12–15 |
 | `chart` | 12–15 |
+| `table` | about 10, scanned tables only |
 | `unknown` | about 10, deliberately ambiguous |
+
+**Both acceptance bars are rates, so growing the set from about 60 to about 70 does not re-derive
+either of them.** Cross-family is measured over all blocks and wrong abstentions over the typed
+ones; adding a group changes both denominators and neither threshold.
 
 The `unknown` entries are not filler. They are the ones that test the rule that a guess is worse
 than an abstention, and without them a classifier that never abstains scores perfectly.
+
+**The `table` entries are pictures of tables, and nothing else.** That is the only way a table
+reaches the classifier: one Docling extracts cleanly is typed by the parser from its own cells and
+never becomes a classifier input (ADR-028). Adding a clean, structurally-extracted table here
+would measure a path this component does not serve. Draw them from **at least two sources**, per
+the ambiguous-group rule below and for the same reason — one scanner's rendering of ruled lines is
+not the general case.
+
+They are also the term ADR-028's reversal condition needs. It weighs charts-called-tables against
+scanned-tables-typed-correctly, and without this group the risk of admitting the label is
+measurable while the benefit is not.
 
 Four **distinct sources** minimum, because a set drawn from one book measures that book's engraver
 as much as it measures the classifier. Two volumes of one series by one author, publisher, and

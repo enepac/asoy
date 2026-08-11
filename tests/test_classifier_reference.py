@@ -87,6 +87,44 @@ def test_table_is_counted_in_a_family_rather_than_falling_through() -> None:
     assert metrics.cross_family == 2, "a photograph against a table is not"
 
 
+def test_chart_and_table_confusion_is_counted_in_both_directions() -> None:
+    """ADR-028's reversal condition, made legible rather than buried in a within-family total.
+
+    Chart-called-table and table-called-chart are both within-family and therefore uncapped, so
+    without their own line the quantity the decision turns on would not appear in the report at
+    all — the bar would pass while the reason to reverse accumulated unseen.
+    """
+    metrics = _metrics(
+        (CHART, TABLE),
+        (CHART, TABLE),
+        (TABLE, CHART),
+        (TABLE, TABLE),
+        (DIAGRAM, CHART),
+    )
+
+    assert metrics.chart_table_confusion == 3, "both directions, not just one"
+    assert metrics.tables_typed_correctly == 1
+    assert metrics.within_family == 4, "the pair is a subset, and diagram-chart is the fourth"
+    assert metrics.chart_table_confusion < metrics.within_family
+
+
+def test_the_report_names_chart_table_confusion_on_its_own_line() -> None:
+    report = _metrics((CHART, TABLE), (TABLE, TABLE)).report("core")
+
+    assert "chart <-> table" in report
+    assert "subset of within-family" in report
+    assert "typed correctly" in report, "the other half of the comparison"
+
+
+def test_chart_table_confusion_alone_does_not_fail_the_bar() -> None:
+    """Reported and weighed by a human, not capped. Capping it is not what ADR-028 decided."""
+    metrics = _metrics(*[(CHART, TABLE)] * 20)
+
+    assert metrics.chart_table_confusion == 20
+    assert metrics.cross_family == 0
+    assert metrics.meets_bar is True
+
+
 def test_a_correct_answer_is_neither_kind_of_confusion() -> None:
     metrics = _metrics((PHOTOGRAPH, PHOTOGRAPH), (CHART, CHART))
     assert (metrics.cross_family, metrics.within_family) == (0, 0)

@@ -157,6 +157,26 @@ class Metrics:
         )
 
     @property
+    def chart_table_confusion(self) -> int:
+        """Charts called tables and tables called charts, counted together in both directions.
+
+        A subset of `within_family`, broken out because it is the exact quantity ADR-028's
+        reversal condition weighs and within-family is uncapped. Buried in that total it would be
+        invisible: the decision to admit `table` is reversed if charts-called-tables outnumbers
+        scanned-tables-typed-correctly, and neither term is legible without this line.
+        """
+        pair = {
+            (DescriptionType.CHART, DescriptionType.TABLE),
+            (DescriptionType.TABLE, DescriptionType.CHART),
+        }
+        return sum(count for key, count in self.matrix.items() if key in pair)
+
+    @property
+    def tables_typed_correctly(self) -> int:
+        """The other half of ADR-028's comparison: scanned tables the classifier got right."""
+        return self.matrix[(DescriptionType.TABLE, DescriptionType.TABLE)]
+
+    @property
     def overconfident(self) -> int:
         """Blocks whose right answer was `unknown` and which were given a type anyway.
 
@@ -261,6 +281,12 @@ class Metrics:
                 f"{self.cross_family_rate:.1%}  (bar: {MAX_CROSS_FAMILY_RATE:.0%})",
                 f"  within-family  {self.within_family:>3}  "
                 f"{self._rate(self.within_family):.1%}  (recorded, uncapped for v1)",
+                # ASCII only. This line is read in a Windows console, where a non-ASCII dash
+                # arrives as a question mark and makes the one comparison that matters unreadable.
+                f"    chart <-> table {self.chart_table_confusion:>3}  "
+                f"(subset of within-family, both directions) vs "
+                f"{self.tables_typed_correctly} tables typed correctly; "
+                "ADR-028 reverses if the first outweighs the second",
                 f"  wrongly unknown{self.wrongly_unknown:>3}  "
                 f"{self.wrongly_unknown_rate:.1%}  of {self.typed_total} typed blocks  "
                 f"(bar: {MAX_WRONGLY_UNKNOWN_RATE:.0%})",

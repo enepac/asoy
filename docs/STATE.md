@@ -13,9 +13,9 @@
 | | |
 |---|---|
 | Version | 0.1.0 (`pyproject.toml`, confirmed by `asoy --version`) |
-| Branch / commit | `main` at `b06f65e`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
+| Branch / commit | `main` at `82393cc`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
 | Push state | `origin/main` was at `1c88dad` when this was verified, behind the local branch above. Anything reading this repository from GitHub sees that commit, not the one in the row above. **State the sync point, never a count** — a count is wrong the moment either side moves, and this line has gone stale twice that way |
-| Tests | 301 passing, 2 deselected (fences 59, classifier 42, environment 36, pipeline 38, classifier-reference 36 of which 2 need Ollama, tiers 26, router 24, smoke 22, calibre 20) |
+| Tests | 304 passing, 2 deselected (fences 59, classifier 42, classifier-reference 39 of which 2 need Ollama, environment 36, pipeline 38, tiers 26, router 24, smoke 22, calibre 20) |
 | Highest ADR | ADR-028 |
 | Dependency tree | 117 packages resolved; license scan shows no GPL-family or AGPL entry |
 | Release | None. No installer, no signing, no users |
@@ -70,9 +70,9 @@ Each line names the command that proves it. All were run.
 
 ## The next move
 
-**Gather the reference sets.** Two components now depend on material that does not exist: the classifier's acceptance bar cannot be measured, and the description generator cannot be built responsibly without its own set, since prompt quality is measured against a reference set or it is not measured (`CLAUDE.md` §9). About 60 public-domain picture blocks from four or more distinct sources, per `reference/classifier/README.md` and the sourcing rules in ADR-028.
+**Gather the reference sets.** Two components now depend on material that does not exist: the classifier's acceptance bar cannot be measured, and the description generator cannot be built responsibly without its own set, since prompt quality is measured against a reference set or it is not measured (`CLAUDE.md` §9). About 70 public-domain picture blocks from four or more distinct sources, per `reference/classifier/README.md` and the sourcing rules in ADR-028.
 
-Triage found two usable sources, not three: Brinton (149 picture blocks, the only chart source) and *The Boy Mechanic*, whose two volumes count as one source. Still needed: two more sources, one of them with type-naming captions, and `table` entries so ADR-028's reversal condition is measurable.
+Triage found two usable sources, not three: Brinton (149 picture blocks, the only chart source) and *The Boy Mechanic*, whose two volumes count as one source. Still needed: two more sources, one of them with type-naming captions, and a group of about 10 scanned-table blocks from at least two sources, without which ADR-028's reversal condition is unmeasurable.
 
 The description generator (4.7) remains the largest gap in the product, and building it before there is anything to measure it with would repeat the position the classifier is in now: complete, plausible, and unevidenced.
 

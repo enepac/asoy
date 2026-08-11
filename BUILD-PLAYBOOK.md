@@ -61,6 +61,10 @@ Nine documents. Eight are written before the build and maintained during it. The
 
 **Reversal conditions.** Every ADR ends with what would reverse it. Without this, a decision log is something you argue with on every re-read. With it, the entry answers back: *access to a Mac for testing, not a volume of requests.* A decision becomes something you can commit to and stop carrying.
 
+**A decision recorded only in a code comment has the force of a decision and none of the protection.** The ask-first list keys on *anything with an ADR*, so a choice living in a comment is invisible to it and a session can reverse it silently — in either direction, since nothing flags either the change or the original. Asoy excluded a label from a classifier's answer set in a comment in one module, a sentence in `ARCHITECTURE.md`, and a test. It read as self-explanatory and was never questioned until a change collided with it, at which point the reasoning had to be reconstructed from the comment rather than read.
+
+The test is not how complicated the choice is. **If it would be re-litigated, or would constrain a future session, it belongs in the decision log** — a comment explains what the code does, and says nothing about what was rejected or what would reverse it. Those two are the whole value of the entry.
+
 **A stated rule for amending an append-only log.** "Append only, never edit" is the right default and it is incomplete, because some ADRs define a specification rather than settling a question — an output format, a schema, a protocol. Those grow. When the fourth attribute has to be added, the rule as written offers only a new ADR that says "as ADR-025, plus one field", and after three of those the specification is spread across four entries and no single one is current.
 
 Write the exception down before you need it, or every instance becomes a judgment call and the log's shape depends on who was asked:
