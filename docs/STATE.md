@@ -13,8 +13,8 @@
 | | |
 |---|---|
 | Version | 0.1.0 (`pyproject.toml`, confirmed by `asoy --version`) |
-| Branch / commit | `main` at `f7c1fa3`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
-| Push state | In sync with `origin/main` at `f7c1fa3`, and one ahead of it until the commit carrying this line is itself pushed. **State the sync point, never a count** — a count is wrong the moment either side moves, and this line has gone stale twice that way |
+| Branch / commit | `main` at `3fce18f`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
+| Push state | In sync with `origin/main` at `3fce18f`, and one ahead of it until the commit carrying this line is itself pushed. **State the sync point, never a count** — a count is wrong the moment either side moves, and this line has gone stale twice that way |
 | Tests | 221 passing (fences 57, environment 36, pipeline 36, tiers 26, router 24, smoke 22, calibre 20) |
 | Highest ADR | ADR-025 |
 | Dependency tree | 117 packages resolved; license scan shows no GPL-family or AGPL entry |
