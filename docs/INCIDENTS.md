@@ -92,6 +92,26 @@ All three below were found in one triage session, on one route, stacked so that 
 
 ---
 
+### INC-004 — A scanned book's tables were narrated with every value against the wrong label
+
+**Date:** 2026-08-11 · **Severity:** S1 · **Version:** unreleased · **Fixed in:** unreleased
+
+**Symptom.** Converting a scanned volume produced tables that read as confident, complete prose and were factually wrong. One rendered as *"Row 1. Year ended Apr. 30-, 1888. 1889 1890. 1891. 1892 1893. 1894. 1895.. Losses per 1,000, 77.5 61.7 76.1 83.7 54.4."* — eight years and five figures in one row, none of them paired as the source pairs them. Another named its columns *"column 2, column 3"*. Nothing indicated a problem: no warning, no placeholder, and a `confidence="1.00" status="ok"` fence around it.
+
+**Cause.** The structural table path assumed a successful extraction is a good extraction. On a scanned book they are not the same thing. Docling reads tables out of the OCR text layer and reports success, but the cell boundaries come from OCR'd rule lines and frequently collapse a whole column into one cell. The renderer then walked those cells faithfully and produced sentences pairing labels with values that were never adjacent in the book.
+
+The path had been exercised only on EPUB tables, where the structure comes from real HTML markup and is correct by construction. Triage of the USDA 1924 Yearbook produced 18 structurally-extracted tables across 40 pages, all marked `source="structure"`, and the failure was visible only by reading the output.
+
+**This is the failure class the project rates highest.** `confidence="1.00"` on wrong data is worse than a low score on it, and worse than no description at all, because a listener has no way to detect it and a downstream pipeline has no reason to flag it.
+
+**Fix.** A structure gate before rendering (ADR-031). A cell holding four or more numeric tokens is a collapsed column; any heading blank other than the top-left corner leaves values unlabelled. Either discards the cells and sends the table down the description path, where it becomes an announced gap today and a real description once the generator exists.
+
+**Prevention.** Six tests covering the gate: a clean table passes, a collapsed cell is caught, unnamed columns are caught, a blank corner cell is not, a value beside a footnote marker is not, and a gated table reaches the output as a marked description rather than as prose. The gated count prints on every conversion, because the gate has no reference corpus behind it and a threshold nobody can see firing is a threshold nobody will revisit.
+
+**What this says about the earlier fix.** ADR-028 re-admitted `table` to the classifier so that a *scanned* table could be typed, on the reasoning that scanned tables arrive as pictures. This incident is the other half of the same misunderstanding: on a good scan they do not arrive as pictures at all, they arrive as bad structure. Both halves came from assuming the EPUB behaviour generalised.
+
+---
+
 ### INC-003 — Scanned PDFs failed with a compiler error, and OCR ran on the wrong engine
 
 **Date:** 2026-08-10 · **Severity:** S2 · **Version:** unreleased · **Fixed in:** unreleased

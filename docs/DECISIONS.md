@@ -716,6 +716,8 @@ The implementation of ADR-026 excluded it, reasoning that the parser types table
 
 The structural path is untouched. The parser types anything with cells before the classifier runs, so this answer only ever applies to a picture *of* a table, which has no cells to render and needs describing like any other picture. `type="table"` with `source="model"` was already legal in the fence (ADR-025, amended by the `source` attribute), so nothing downstream changes.
 
+*Ruling dropped by ADR-030: five books were triaged and none captions figures by type, including the one chosen for it. The pre-pass keeps its unit fixtures and the core set records whatever rate real books produce.*
+
 **Decision 2: one source must have type-naming captions.** None of the three does. Brinton's alt text is `Image 0`, `Image 1`, … for all 149; Boy Mechanic Book 3 has 515 empty captions out of 857, and the rest are descriptive (`Boys sailing`) rather than type-naming. A core set built from these alone would send essentially every block to the model and measure the caption pre-pass on nothing.
 
 Separately, the pre-pass gets its own caption unit fixtures. **The two measure different things and neither substitutes for the other:** fixtures prove the pre-pass *parses* a caption correctly, and can be written for any wording. The core set proves it *fires* — that real books actually phrase captions in ways it catches, at a rate worth the code. A pre-pass that passes every fixture and never triggers on a real book is working and worthless.
@@ -788,6 +790,72 @@ Recorded here rather than left as a code comment, per the playbook lesson that a
 **Consequences.** Setup gains a second prerequisite step, and it is the one ADR-008 already identified as the product's largest support cost. It applies only to scanned input; EPUB, DOCX, and ODT need nothing. The dependency tree grows by onnxruntime and its transitive additions.
 
 Three defects on one route went unnoticed while 304 tests passed, because every test converted a declarative format and none of them touched OCR. That gap is closed by an end-to-end conversion of a generated image-only PDF, which cannot pass unless all three are fixed. See INC-001 through INC-003.
+
+---
+
+## ADR-030 - The core set does not require type-naming captions, because no book has them
+
+**Date:** 2026-08-11 · **Status:** Accepted. Drops ruling 1 of ADR-028; the rest of that entry stands.
+
+**Decision.** ADR-028 required that at least one core reference source caption its figures by type, so that the caption pre-pass would be measured on something. **That requirement is dropped.** The pre-pass keeps its unit fixtures, and the core set records whatever firing rate real books produce.
+
+**Why.** Five books were triaged and none has the style. The assumption behind ruling 1 was that some public-domain book captions figures as "FIG. 12. Diagram showing…", and it is not supported:
+
+| Source | Captions | Pre-pass settles |
+|---|---|---|
+| Brinton, *Graphic Methods* (Internet Archive) | `Image 0`, `Image 1`, … synthetic alt text | 0 of 149 |
+| *The Boy Mechanic* v1 and b3 (Gutenberg) | Descriptive alt text, `Boys sailing`; 60% empty | 0 |
+| Byrn, *Progress of Invention* (Gutenberg) | Descriptive alt text, `Volta's experiment with frog legs` | **30 of 371, 8.1%** |
+| USDA *Yearbook 1924* (Internet Archive) | `FIG. 27.-The average per capita tax…` | **0 of 14** |
+
+USDA is the instructive one. Its captions *are* in the `FIG. N.` form the requirement was written for, and they still settle nothing, because the numbering is followed by a statement of the finding rather than a naming of the type. `FIG. 33.-Revenues derived from bond issues in 1921 constituted only one-eighth…` contains no type word. **The form was the wrong thing to look for; the type word is what matters, and books do not supply it.**
+
+Byrn's 8.1% is the measured rate and the best available, and it is thinner than it reads: 16 of its 30 hits are one repeated series, leaving roughly twelve distinct caption patterns. Those go in the core set, so the pre-pass has a measurable presence rather than none.
+
+**Consequences.** The pre-pass fires on roughly one caption in twelve on the only source that fires at all, and on nothing at all in three of five books. **Whether it earns its keep is now a live question**, and it is answerable from the core set rather than by argument. It stays for now: it is cheap, the answers it produces carry the highest certainty in the component (0.90, a fact about the book rather than a model's self-report), and removing it would be a change made without the measurement that this ADR exists to enable.
+
+Two things this does not change. The pre-pass keeps its unit fixtures, which prove it parses a caption correctly and can be written for any wording. And ADR-028's distinction stands: fixtures prove it parses, the core set proves it fires. This entry only stops requiring a source that does not exist.
+
+**Rejected.**
+- *Keep hunting for a source with type-naming captions* — five books, one already chosen specifically for this, and the USDA result suggests the style belongs to modern technical writing rather than to the public-domain era the core set must draw from.
+- *Drop the pre-pass entirely* — it would be removing a component on an unmeasured argument, which is the failure ADR-026's reference set exists to prevent. Measure first.
+- *Write captions for the core entries by hand* — the manifest already forbids inventing a caption, because it makes the pre-pass look better than it is. Doing it to satisfy a rule about measuring the pre-pass would be circular.
+- *Take the type-naming captions from a modern source in the local extension* — the extension never sets or moves the bar (ADR-028), and a rate measured there could not be checked by anyone else.
+
+**Would reverse this.** A public-domain source that captions figures by type turning up, which would restore the requirement at no cost. Or the core set showing the pre-pass firing near zero across every source, which would reopen whether it should exist at all.
+
+---
+
+## ADR-031 - A table whose extracted structure cannot be narrated falls through to description
+
+**Date:** 2026-08-11 · **Status:** Accepted. Narrows the structural-table path of ARCHITECTURE 4.6 and ADR-028.
+
+**Decision.** Before a table is rendered from its extracted cells, the structure is checked. When it fails, the cells are discarded and the block becomes a description like any picture, carrying `type="table"`. The count of gated tables is reported on every conversion.
+
+Two checks, both facts about the extraction rather than a tuned score:
+
+- **A collapsed cell.** A cell holding four or more numeric tokens is a column crammed into one place rather than a value.
+- **Unnamed columns.** Any heading blank other than the top-left corner, which nearly every table has and which would gate almost everything.
+
+**Why.** ADR-028 assumed a cleanly extracted table is the good case and a failed extraction the rare one. On scanned input that is inverted. In the USDA 1924 Yearbook, Docling extracts tables from the OCR text layer *successfully* — 18 of them across 40 pages, all `source="structure"` — and the result cannot be narrated. One render pairs a cell reading `1888. 1889 1890. 1891.` with a cell reading `77.5 61.7 76.1 83.7`, so every year is read against the wrong figure. Another names its columns `column 2, column 3`.
+
+**The first of those is wrong output, not merely poor output.** It asserts pairings of labels and values that the source does not contain, in a form a listener has no way to detect. `INCIDENTS.md` rates plausible wrong output S1 for exactly this reason, and the project has consistently chosen the announced gap over the confident error — `unknown` rather than a guess (ADR-026), a placeholder rather than silence (ADR-016), a refusal rather than a dropped block.
+
+The second is useless rather than wrong: the values are correctly paired and nothing says what they are. It is gated too, because a figure with no referent cannot be narrated either, but the distinction is recorded because it matters if the checks are ever tuned.
+
+Accepting the bad render also puts the worst case on the one path that bypasses the model entirely, so it could never improve. Gated, the table reaches the description generator and gets a real description once that exists.
+
+**Consequences.** Until the description generator lands, a gated table becomes a placeholder — the listener hears that a table was there rather than hearing wrong numbers. That is a real interim cost and a temporary one.
+
+**The gate has no reference set behind it.** There is no table-render corpus, so its thresholds are reasoned rather than measured, which is the same position `CERTAINTY_FLOOR` is in. The gated count is printed on every conversion so that it firing too often, or never, is visible rather than silent. Four is deliberately generous as a token threshold: a cell reading `1,234.5` is one token and a figure beside a footnote marker is two.
+
+**Rejected.**
+- *Accept the render and document the limitation* — a documented trap is still a trap, and this one produces confident wrong data rather than an ugly reading.
+- *A quality score with a tuned threshold* — unmeasurable without a corpus, and it would become another number set from nothing and never revisited.
+- *Gate on duplicate column headings* — the obvious third check, and wrong. The USDA table repeating `Year ended Apr. 30-` four times is the source's real structure, a multi-panel layout, not a garbled one.
+- *Repair the structure rather than gating it* — guessing where a collapsed column should split is inventing data.
+
+**Would reverse this.** A measured table-render corpus showing the gate fires on tables that narrate acceptably, or a Docling release whose table extraction on OCR'd input no longer collapses columns.
 
 ---
 

@@ -64,6 +64,7 @@ class RenderedDocument:
     titled_chapter_count: int
     description_count: int
     failed_description_count: int
+    gated_table_count: int
 
 
 def render_table(rows: tuple[tuple[str, ...], ...]) -> str:
@@ -154,6 +155,7 @@ def render(document: ParsedDocument, *, tier: str, model: str) -> RenderedDocume
         failed_description_count=sum(
             1 for s in descriptions if s.status is DescriptionStatus.FAILED
         ),
+        gated_table_count=len(document.gated_tables),
     )
 
 

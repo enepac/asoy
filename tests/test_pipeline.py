@@ -328,6 +328,105 @@ def test_a_table_that_did_not_extract_falls_through_to_the_model_route() -> None
     assert 'source="structure"' not in markdown
 
 
+# --- The table structure gate (ADR-031) ---------------------------------------------------------
+
+
+def _gated(rows) -> str:
+    from asoy.parser import _table_problem
+
+    return _table_problem(rows)
+
+
+def test_a_clean_table_passes_the_gate() -> None:
+    assert _gated((("Name", "Year"), ("Ada", "1843"), ("Grace", "1952"))) == ""
+
+
+def test_a_collapsed_cell_is_gated() -> None:
+    """The S1 case: a whole column crammed into one cell pairs labels with the wrong values.
+
+    Taken from the USDA 1924 Yearbook, where one cell held eight years and its neighbour held
+    eight figures, so narrating the row attributed every value to the wrong year (INC-004).
+    """
+    rows = (
+        ("Year ended Apr. 30-", "Losses per 1,000"),
+        ("1888. 1889 1890. 1891. 1892", "77.5 61.7 76.1 83.7 54.4"),
+    )
+    problem = _gated(rows)
+
+    assert problem
+    assert "collapsed" in problem
+
+
+def test_unnamed_columns_are_gated() -> None:
+    """The useless case: values correctly paired and nothing saying what they are."""
+    problem = _gated((("State funds", "", ""), ("State bonds", "$113,304,202", "x")))
+
+    assert problem
+    assert "no heading" in problem
+
+
+def test_a_blank_corner_cell_is_not_gated() -> None:
+    """Nearly every table has one. Gating on it would send almost every table to the model."""
+    assert _gated((("", "1922", "1923"), ("Wheat", "12", "14"))) == ""
+
+
+def test_a_table_with_headings_and_no_rows_is_gated() -> None:
+    """Found in the USDA excerpt after the first gate landed: a whole table folded into its
+    heading row, rendering as "a table of 2 columns and 0 rows". There is nothing to read out."""
+    problem = _gated((("Property taxes", "$90,000,000 415,000,000 225,000,000 75,000,000"),))
+
+    assert problem
+    assert "no rows" in problem
+
+
+def test_a_collapsed_cell_in_the_heading_row_is_gated() -> None:
+    """A collapsed column lands in the heading as readily as in a body row."""
+    rows = (("Year", "1888 1889 1890 1891 1892"), ("Losses", "77.5"))
+    problem = _gated(rows)
+
+    assert problem
+    assert "heading row" in problem
+
+
+def test_a_cell_with_a_few_tokens_is_not_gated() -> None:
+    """A figure with a footnote marker, or a date range, is not a collapsed column."""
+    assert _gated((("Year", "Value"), ("1922", "1,234.5 2"))) == ""
+
+
+def test_a_gated_table_becomes_a_description_rather_than_wrong_prose() -> None:
+    """The whole point: an announced gap beats confidently mispaired numbers."""
+    block = Block(
+        kind=BlockKind.NON_TEXT,
+        non_text=NonText(
+            type=DescriptionType.TABLE,
+            locator="table[0]",
+            table=None,
+            detail="row 1 has a cell holding 5 values in one place",
+        ),
+    )
+    rendered = _render(_document(Chapter(title="One", blocks=(block,))))
+
+    assert 'type="table"' in rendered.markdown
+    assert 'status="failed"' in rendered.markdown
+    assert "could not describe" in rendered.plain_text
+    assert rendered.gated_table_count == 1
+
+
+def test_a_clean_table_is_not_counted_as_gated() -> None:
+    block = Block(
+        kind=BlockKind.NON_TEXT,
+        non_text=NonText(
+            type=DescriptionType.TABLE,
+            locator="table[0]",
+            table=(("Name", "Year"), ("Ada", "1843")),
+        ),
+    )
+    rendered = _render(_document(Chapter(title="One", blocks=(block,))))
+
+    assert rendered.gated_table_count == 0
+    assert 'status="ok"' in rendered.markdown
+
+
 def test_every_description_type_has_a_readable_placeholder() -> None:
     """A missing entry would be a KeyError mid-conversion, on a book that reached the end."""
     for kind in DescriptionType:

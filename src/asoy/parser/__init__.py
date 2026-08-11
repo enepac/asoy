@@ -16,6 +16,7 @@ than quietly omitted (CLAUDE.md section 9).
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -55,6 +56,9 @@ class NonText:
     type: DescriptionType
     locator: str
     table: tuple[tuple[str, ...], ...] | None = None
+    # Why a table's cells were rejected, when they were. Empty for pictures and for tables whose
+    # structure came through. Surfaced so a gated table names its own cause (ADR-031).
+    detail: str = ""
 
 
 @dataclass(frozen=True)
@@ -97,6 +101,19 @@ class ParsedDocument:
     @property
     def block_count(self) -> int:
         return sum(len(chapter.blocks) for chapter in self.chapters)
+
+    @property
+    def gated_tables(self) -> tuple[NonText, ...]:
+        """Tables whose structure was rejected and which fall through to a description.
+
+        Reported on every conversion (ADR-031). The gate has no reference set behind it, so the
+        count is how anyone would notice it firing too often or not at all.
+        """
+        return tuple(
+            block
+            for block in self.non_text_blocks
+            if block.type is DescriptionType.TABLE and block.table is None
+        )
 
     @property
     def non_text_blocks(self) -> tuple[NonText, ...]:
@@ -304,11 +321,7 @@ def _extract(path: Path, result: object) -> ParsedDocument:
             items.append(
                 _Item(
                     label=label,
-                    non_text=NonText(
-                        type=DescriptionType.TABLE,
-                        locator=f"table[{tables}]",
-                        table=_table_cells(item),
-                    ),
+                    non_text=_table_block(item, tables),
                 )
             )
             tables += 1
@@ -322,20 +335,83 @@ def _extract(path: Path, result: object) -> ParsedDocument:
     return ParsedDocument(source=path, chapters=_to_blocks_and_chapters(items))
 
 
-def _table_cells(item: object) -> tuple[tuple[str, ...], ...] | None:
-    """The table's cells as rows of strings, or None if Docling did not extract it cleanly.
+# A cell holding this many numeric tokens is a collapsed column, not a value (ADR-031).
+# Four is deliberately generous: a cell legitimately reading "1,234.5" is one token, and a date
+# range or a footnote marker beside a figure is two or three.
+_COLLAPSED_CELL_TOKENS = 4
+
+_NUMERIC_TOKEN = re.compile(r"^[$(]?[\d,.]*\d[\d,.]*[)%]?\.?$")
+
+
+def _table_problem(rows: tuple[tuple[str, ...], ...]) -> str:
+    """Why this extracted structure cannot be narrated, or "" when it can (ADR-031).
+
+    Checkable facts about the extraction, not a tuned score. Each one names output a listener
+    could not use, and the two differ in kind:
+
+    * A collapsed cell produces output that is **wrong** — a cell holding a whole column of years
+      beside a cell holding a whole column of values pairs every label with the wrong number.
+    * Unnamed columns produce output that is **useless** — the values are correctly paired and
+      nothing says what they are, so a listener hears figures with no referent.
+
+    The blank top-left corner is not counted. Nearly every table has one, and gating on it would
+    send almost every table to the model.
+    """
+    if not rows:
+        return "no rows"
+
+    header, *body = rows
+    if not body:
+        return "the extraction found headings but no rows, so there is nothing to read out"
+
+    if len(header) > 1 and any(not cell for cell in header[1:]):
+        unnamed = sum(1 for cell in header[1:] if not cell)
+        return f"{unnamed} of {len(header)} columns have no heading"
+
+    # Every row, the heading included. A collapsed column lands in the heading row as readily as
+    # in a body row, and a heading holding a column of figures is the same defect one line up.
+    for index, row in enumerate(rows):
+        for cell in row:
+            # Counted, not required of every token: OCR leaves stray words inside a collapsed
+            # column — a unit heading, a month abbreviation — and demanding that all of them be
+            # numeric let the worst tables through on one non-numeric word.
+            figures = sum(1 for token in cell.split() if _NUMERIC_TOKEN.match(token))
+            if figures >= _COLLAPSED_CELL_TOKENS:
+                where = "the heading row" if index == 0 else f"row {index}"
+                return (
+                    f"{where} has a cell holding {figures} figures in one place, so the "
+                    "extraction collapsed a column rather than splitting it"
+                )
+    return ""
+
+
+def _table_cells(item: object) -> tuple[tuple[tuple[str, ...], ...] | None, str]:
+    """The table's cells as rows of strings, plus why they were rejected if they were.
 
     "Cleanly" is the test ARCHITECTURE 4.6 needs: a table whose structure came through is
     rendered from that structure, and one that did not becomes a description like any other
-    picture. A half-extracted table rendered as if it were whole is the worst of the three.
+    picture. A half-extracted table rendered as if it were whole is the worst of the three, and on
+    scanned input it is the common case rather than the rare one (ADR-031, INC-004).
     """
     grid = getattr(getattr(item, "data", None), "grid", None)
     if not grid:
-        return None
+        return None, "Docling extracted no cell structure"
 
     rows = tuple(
         tuple(str(getattr(cell, "text", "") or "").strip() for cell in row) for row in grid
     )
     if not any(any(cell for cell in row) for row in rows):
-        return None
-    return rows
+        return None, "every extracted cell is empty"
+
+    problem = _table_problem(rows)
+    if problem:
+        return None, problem
+    return rows, ""
+
+
+def _table_block(item: object, index: int) -> NonText:
+    """One table as a non-text block, gated on whether its structure can be narrated."""
+    rows, problem = _table_cells(item)
+    return NonText(
+        type=DescriptionType.TABLE, locator=f"table[{index}]", table=rows, detail=problem
+    )

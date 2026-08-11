@@ -48,11 +48,13 @@ illustrator are **one source**, not two — same rendering pipeline (ADR-028).
 
 Three further sourcing rules, all from ADR-028:
 
-- **At least one source must have type-naming captions** ("Fig. 4.—Photograph of the north face").
-  Without one, the caption pre-pass is measured on nothing: the books triaged so far caption their
-  figures descriptively ("Boys sailing") or not at all, so every block reaches the model. Note that
-  the pre-pass also has its own unit fixtures, and the two measure different things — fixtures
-  prove it parses a caption, the core set proves it fires on real ones.
+- **No source is required to have type-naming captions**, because none does. Five books were
+  triaged and the requirement was dropped (ADR-030). The best observed rate is Byrn at 8.1%, and
+  those captions belong in the core so the pre-pass has a measurable presence. The USDA Yearbook
+  is the instructive failure: its captions *are* in the "FIG. 27.-" form, and they still settle
+  nothing, because the number is followed by a finding rather than a type. The pre-pass keeps its
+  own unit fixtures, which measure a different thing — fixtures prove it parses a caption, the
+  core set proves it fires on real ones.
 - **Rotated figures stay rotated.** Scanned landscape plates read sideways; de-rotating them would
   tidy the input to make the test easier. Set `"rotated": true` on those entries so the confusion
   matrix can be read both ways. If the chart group ends up entirely rotated, record that as a

@@ -152,6 +152,11 @@ def _convert_command(book: Path, output_dir: Path) -> int:
             f"Described: {artifacts.description_count} non-text blocks, "
             f"{artifacts.failed_description_count} marked as placeholders"
         )
+    if artifacts.gated_table_count:
+        print(
+            f"Tables:    {artifacts.gated_table_count} had structure too damaged to narrate and "
+            "were passed on for description instead"
+        )
     print(f"Markdown: {artifacts.markdown_path}")
     print(f"Text:     {artifacts.text_path}")
     return 0

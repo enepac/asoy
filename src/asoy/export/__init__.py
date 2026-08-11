@@ -30,6 +30,7 @@ class WrittenArtifacts:
     chapter_count: int
     description_count: int = 0
     failed_description_count: int = 0
+    gated_table_count: int = 0
 
 
 def _write_and_verify(path: Path, content: str) -> None:
@@ -67,4 +68,5 @@ def write(rendered: RenderedDocument, output_dir: Path, stem: str) -> WrittenArt
         chapter_count=rendered.chapter_count,
         description_count=rendered.description_count,
         failed_description_count=rendered.failed_description_count,
+        gated_table_count=rendered.gated_table_count,
     )

@@ -13,10 +13,10 @@
 | | |
 |---|---|
 | Version | 0.1.0 (`pyproject.toml`, confirmed by `asoy --version`) |
-| Branch / commit | `main` was at `c6b993f` when the lines below were verified. Regeneration fires on the three triggers in `CLAUDE.md` §6, not on every commit, so the tree can be several commits ahead of this row rather than exactly one — it was five ahead before this regeneration |
-| Push state | `origin/main` was at `c6b993f` when this was verified, level with the local branch. **State the sync point, never a count** — a count is wrong the moment either side moves, and this line has gone stale twice that way |
-| Tests | 321 passing, 2 deselected (fences 59, classifier 42, classifier-reference 39 of which 2 need Ollama, pipeline 38, environment 36, tiers 26, router 24, smoke 22, calibre 20, ocr 17 of which 1 converts a real scanned PDF) |
-| Highest ADR | ADR-029 |
+| Branch / commit | `main` was at `49ee69c` when the lines below were verified. Regeneration fires on the three triggers in `CLAUDE.md` §6, not on every commit, so the tree can be several commits ahead of this row rather than exactly one — it was five ahead before this regeneration |
+| Push state | `origin/main` was at `49ee69c` when this was verified, level with the local branch. **State the sync point, never a count** — a count is wrong the moment either side moves, and this line has gone stale twice that way |
+| Tests | 330 passing, 2 deselected (fences 59, pipeline 47, classifier 42, classifier-reference 39 of which 2 need Ollama, environment 36, tiers 26, router 24, smoke 22, calibre 20, ocr 17 of which 1 converts a real scanned PDF) |
+| Highest ADR | ADR-031 |
 | Dependency tree | `uv sync` → 150 resolved, 124 installed; `uv run pip-licenses` lists 120 distributions and shows no GPL-family or AGPL entry. The three figures count different things. This row previously read "120 packages resolved", which is the license-scan count wearing the resolver's word and is not what any command reports |
 | Release | None. No installer, no signing, no users |
 
@@ -67,6 +67,8 @@ Each line names the command that proves it. All were run.
 - **The classification prompt is unratified.** It is isolated in `src/asoy/classifier/prompt.py` and marked, and `CLAUDE.md` §5 treats prompts as ask-first. It has never been compared against an alternative.
 - **`CERTAINTY_FLOOR` is a placeholder, not a considered value.** It moves the measured `unknown` rate almost directly and should be set from the reference set once that exists.
 - **One input cannot be represented**: author text containing a line that is exactly `<!-- /asoy:text -->`. It raises and writes nothing rather than emitting a file that misparses itself (ADR-025). Requires a book to contain Asoy's own closing marker verbatim.
+- **The table structure gate has no reference corpus.** It rejects tables whose extraction collapsed a column or left headings blank (ADR-031), and on the USDA statistics pages it gates 10 of 13. Whether that is right is unmeasured; the gated count prints on every conversion so it is at least visible.
+- **The caption pre-pass fires on about one caption in twelve, on the one source of five that fires at all** (ADR-030). Whether it earns its keep is now a live question, answerable from the core set.
 - **The table narration form has been read, not heard.** A table becomes `A table of 2 columns and 2 rows. The columns are: Name, Year.` then `Row 1. Name, Ada. Year, 1843.` It was chosen for the ear and has never been through a text-to-speech engine. **Needs a listening pass before 1.0**, on a real table of more than three columns, where naming every column on every row may prove tiring rather than clarifying.
 - **Runs of whitespace collapse in EPUB and HTML** (`ARCHITECTURE` §11). Decided and documented, not a defect, listed here so it is not rediscovered.
 - **Anything reading this repository from GitHub sees the default branch as pushed, not as it stands locally.** The position table above says where that is. Uncommitted work and unpushed commits are invisible to it.
