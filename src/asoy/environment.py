@@ -53,6 +53,7 @@ class EnvironmentStatus(StrEnum):
     READY = "ready"
     OLLAMA_UNREACHABLE = "ollama_unreachable"
     MODEL_MISSING = "model_missing"
+    OCR_WEIGHTS_MISSING = "ocr_weights_missing"
     CHECK_FAILED = "check_failed"
 
 
@@ -176,9 +177,34 @@ def check(tier: Tier) -> EnvironmentCheck:
             remedy=f"ollama pull {tag}",
         )
 
+    # The OCR weights are the second thing that must be in place, and unlike Ollama they are
+    # needed only for scanned input (ADR-029). They are reported last so that a user who converts
+    # only EPUBs sees the reason they are listed rather than a bare failure.
+    from asoy.ocr import FETCH_COMMAND, REQUIRED_WEIGHTS
+    from asoy.ocr import status as ocr_status
+
+    weights = ocr_status()
+    if not weights.ready:
+        return EnvironmentCheck(
+            ok=False,
+            status=EnvironmentStatus.OCR_WEIGHTS_MISSING,
+            detail=(
+                f"Ollama is ready. The OCR models are not: {len(weights.missing)} of "
+                f"{len(REQUIRED_WEIGHTS)} are missing from {weights.directory}. Scanned PDFs and "
+                "images need them; EPUB, DOCX, and ODT do not."
+            ),
+            remedy=(
+                f"Run '{FETCH_COMMAND}' once. Asoy never downloads them during a conversion, so "
+                "that converting a book makes no network request at all."
+            ),
+        )
+
     return EnvironmentCheck(
         ok=True,
         status=EnvironmentStatus.READY,
-        detail=f"Ollama is reachable at {host} and the {tier} tier model {tag} is available.",
+        detail=(
+            f"Ollama is reachable at {host}, the {tier} tier model {tag} is available, and the "
+            f"OCR models are present in {weights.directory}."
+        ),
         remedy="",
     )

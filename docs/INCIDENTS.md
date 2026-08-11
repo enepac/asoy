@@ -86,24 +86,52 @@ Logging documented limitations as incidents inflates the record and buries the e
 
 ## Log
 
-*No incidents recorded yet.*
+Newest entries at the top.
 
-Newest entries at the top once this begins. The example below shows the expected shape and depth — **delete it when the first real entry lands.**
-
----
-
-### INC-000 — EXAMPLE ENTRY, DELETE ON FIRST REAL INCIDENT
-
-**Date:** YYYY-MM-DD · **Severity:** S1 · **Version:** 1.2.0 · **Fixed in:** 1.2.1
-
-**Symptom.** A user reported that a converted book was missing its final chapter. The output file looked complete — correct formatting, clean ending — with no error shown and no warning in the log. They discovered it only after narrating the whole book.
-
-**Cause.** The assembler wrote output as each chapter completed but did not flush before the process exited on the final chapter. On most machines the buffer flushed incidentally; on slower disks it did not. The job was marked successful because every chapter had been *processed*, and completion was never checked against what was actually *written*.
-
-**Fix.** Explicit flush and fsync before marking a job complete. Job completion now asserts that the emitted chapter count matches the parsed chapter count, and fails the job loudly if it does not.
-
-**Prevention.** The count assertion is the real guard — it makes an entire class of silent truncation impossible rather than fixing one instance of it. Added a test that runs a conversion against a simulated slow disk. Noted in the pre-mortem table that "job reports success" and "output is correct" were being treated as the same claim; they are now separate checks.
+All three below were found in one triage session, on one route, stacked so that each hid the next. None had shipped to a user, because no release exists — but all three were live in the working tree, and a user converting a scanned PDF on that build would have hit every one.
 
 ---
 
-*Companion documents: `RUNBOOK.md` (procedures), `DECISIONS.md` (structural changes), `SUPPORT.md` (documented limitations), `../CHANGELOG.md` (what shipped when).*
+### INC-003 — Scanned PDFs failed with a compiler error, and OCR ran on the wrong engine
+
+**Date:** 2026-08-10 · **Severity:** S2 · **Version:** unreleased · **Fixed in:** unreleased
+
+**Symptom.** Converting a scanned PDF failed with `InductorError: InvalidCxxCompiler: Compiler: cl is not found`. Nothing in the message mentioned OCR, PDFs, or anything a user could act on.
+
+**Cause.** Two faults in one route. `onnxruntime` was never in the dependency tree, so RapidOCR silently fell back to its PyTorch engine — a different engine from the one ADR-019 records, announced only in a log line. That engine, and Docling's own layout model, invoke `torch.compile`; TorchInductor shells out to a C++ compiler, and `cl.exe` is absent on any Windows machine without Visual Studio, which is essentially all of them.
+
+**Fix.** `onnxruntime` added to the manifest so the documented engine is the one that runs, and `torch.compile` disabled in-process (ADR-029, decisions 2 and 3).
+
+**Prevention.** A test asserts `onnxruntime` is importable and that every model path Asoy passes is an `.onnx` file, since the engine is chosen by what it is handed. A second asserts `torch.compile` is disabled. Both are cheap; neither would have fired without the end-to-end test in INC-001, which is what made the route visible at all.
+
+---
+
+### INC-002 — Converting a book silently downloaded 30 MB from a third-party host
+
+**Date:** 2026-08-10 · **Severity:** S2 · **Version:** unreleased · **Fixed in:** unreleased
+
+**Symptom.** Starting a conversion of a scanned PDF produced several seconds of unexplained delay. The log, read for a different reason, showed four downloads from `modelscope.cn` totalling about 30 MB.
+
+**Cause.** RapidOCR fetches its model weights on first use. Nothing in Asoy asked for this and nothing disclosed it. `ARCHITECTURE.md` §9 stated "exactly one outbound request exists", and `DATA.md` told users to watch their traffic and expect to see only the version check. Both were false the first time anyone converted a scanned page. No user content was transmitted, so invariant 1's substance held — but a network request triggered by "convert this book" is the worst available shape for one, and the weights were being written into `site-packages`, which is read-only in a packaged install.
+
+**Fix.** Weights became a checked prerequisite fetched by an explicit user command, stored in a directory Asoy controls, with every model path passed to Docling so there is nothing left to resolve (ADR-029, decision 1). Documentation corrected across six files.
+
+**Prevention.** A test asserts that the only module in the package containing a URL opener is the OCR module, and that neither the parser nor the orchestrator can reach the downloader. The claim that a conversion transmits nothing is now enforced rather than asserted.
+
+---
+
+### INC-001 — Every OCR path was dead, and four books converted anyway
+
+**Date:** 2026-08-10 · **Severity:** S2 · **Version:** unreleased · **Fixed in:** unreleased
+
+**Symptom.** Converting a PDF failed immediately with `AttributeError: module 'cv2' has no attribute 'setNumThreads'`.
+
+**Cause.** `opencv-python` had unpacked without its `__init__.py` and without its extension module, leaving a `cv2/` directory containing only a DLL and two subdirectories. `import cv2` therefore succeeded and produced an empty namespace package, so every call into it failed. A reinstall fixed it; the installed version never changed.
+
+**The first diagnosis was wrong and is worth recording.** It blamed a version incompatibility — opencv-python 5.0.0.93 against RapidOCR's `>=4.5.1.48` — and proposed pinning below 5. The pin was never applied: `uv pip install "opencv-python<5"` reinstalled the same version, and it was the reinstall that fixed it. A version bound would have appeared to work, for the wrong reason, and would have constrained the manifest for no benefit.
+
+**Fix.** None in the manifest. The install was repaired, and the defect is now detectable.
+
+**Prevention.** A test asserts `cv2.__file__` is not None and `setNumThreads` is callable, because a bare import passes on the broken install and is not a test of anything. More importantly, an end-to-end conversion of a generated image-only PDF now runs in the default suite. **304 tests passed while this route was completely dead**, because every one of them converted a declarative format and EPUB never touches OCR. A route with no end-to-end test accumulates defects silently, and they surface together.
+
+---

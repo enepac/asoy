@@ -187,6 +187,44 @@ def _to_blocks_and_chapters(items: list[_Item]) -> tuple[Chapter, ...]:
     return tuple(chapters)
 
 
+# Formats whose pipeline runs OCR, and therefore needs the weights present. The declarative
+# formats — EPUB, DOCX, ODT, HTML — never touch it, which is exactly why every OCR defect in
+# INC-001 through INC-003 went unnoticed while four books converted successfully.
+_OCR_SUFFIXES = frozenset({".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"})
+
+
+def _converter_for(path: Path):
+    """Build the converter for this input, configuring OCR only when the format needs it.
+
+    Two things are set for the OCR formats, both from ADR-029. Every model path is passed
+    explicitly, so RapidOCR has nothing to resolve and cannot fetch during a conversion. And
+    `torch.compile` is disabled, because TorchInductor needs a C++ compiler that is absent on
+    essentially every user machine.
+    """
+    from docling.document_converter import DocumentConverter
+
+    if path.suffix.lower() not in _OCR_SUFFIXES:
+        return DocumentConverter()
+
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import PdfPipelineOptions
+    from docling.document_converter import ImageFormatOption, PdfFormatOption
+
+    from asoy.ocr import disable_torch_compile, ocr_options
+
+    disable_torch_compile()
+
+    pipeline = PdfPipelineOptions()
+    pipeline.ocr_options = ocr_options()
+
+    return DocumentConverter(
+        format_options={
+            InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline),
+            InputFormat.IMAGE: ImageFormatOption(pipeline_options=pipeline),
+        }
+    )
+
+
 def _release(result: object) -> None:
     """Close Docling's handle on the file it just read.
 
@@ -217,10 +255,10 @@ def parse(path: Path) -> ParsedDocument:
 
     The file is not held open after this returns. See `_release`.
     """
-    from docling.document_converter import DocumentConverter
+    converter = _converter_for(path)
 
     try:
-        result = DocumentConverter().convert(path)
+        result = converter.convert(path)
     except Exception as exc:
         raise ParseError(f"Docling failed to convert {path}: {type(exc).__name__}: {exc}") from exc
 

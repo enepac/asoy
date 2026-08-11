@@ -35,7 +35,7 @@ If a suggestion contradicts a recorded decision, cite the ADR and argue against 
 
 These do not bend. Breaking one is a defect regardless of how good the reason sounded.
 
-1. **No user content leaves the machine.** No page image, no extracted text, no filename, no book metadata — no outbound request carries any of it. The single permitted network call is the version check, which sends the version string and nothing else. Adding a crash reporter, an analytics call, or a "helpful" cloud fallback violates the product's central promise.
+1. **No user content leaves the machine.** No page image, no extracted text, no filename, no book metadata — no outbound request carries any of it. **A conversion makes no network request at all.** Two outbound calls exist and neither is on the conversion path: the version check, which sends the version string and nothing else, and the OCR model download, which runs only when the user invokes the setup command that fetches them (ADR-029). Adding a crash reporter, an analytics call, a "helpful" cloud fallback, or a model fetch triggered by converting a book violates the product's central promise.
 
 2. **No DRM circumvention.** No stripping code, no plugin hooks that provide it, no documented workaround. DRM-protected files are rejected at ingestion with an explanation.
 

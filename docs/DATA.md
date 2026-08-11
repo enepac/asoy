@@ -11,7 +11,7 @@
 
 Asoy holds your books, your converted output, and some technical records about conversion jobs — **all of them on your own computer, in folders you control.** None of it is transmitted anywhere. The project maintainer has no access to any of it and no ability to obtain it.
 
-The only outbound network request Asoy makes is a version check, which sends the version number and nothing else.
+**Converting a book makes no network request at all.** Asoy makes two outbound requests in total and neither happens during a conversion: a version check, which sends the version number and nothing else, and a one-off download of the text-recognition models, which happens only when you run the setup command that fetches them.
 
 ---
 
@@ -85,8 +85,8 @@ Nothing survives elsewhere, because nothing was ever elsewhere. There is no acco
 
 Asoy is open source under Apache 2.0. These claims are checkable rather than merely asserted, and you are encouraged to check them.
 
-- **Read the network code.** There is one outbound request in the codebase. Search for the HTTP client; if you find a second destination, that is a serious bug and worth reporting.
-- **Watch the traffic.** Run a conversion with a network monitor or firewall logging enabled. You should see nothing but the version check, and nothing at all if you disabled it.
+- **Read the network code.** There are two outbound requests in the codebase: the version check, and the model download in the OCR module that only the setup command reaches. A test asserts no other module can open a URL. If you find a third destination, or anything on the conversion path, that is a serious bug and worth reporting.
+- **Watch the traffic.** Run a conversion with a network monitor or firewall logging enabled. You should see nothing at all. The version check happens at startup rather than during a conversion, and the model download only when you ask for it.
 - **Read the logs.** Open one after a conversion and confirm it contains no book text.
 - **Check the dependency list.** `ARCHITECTURE.md` §8 lists every third-party component and what it is for.
 

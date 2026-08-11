@@ -245,6 +245,8 @@ Open source over paid because the whole dependency stack is free and open. A pai
 
 **Decision.** The only network request the application makes is a version check. It carries the current version and nothing else, and it is disableable.
 
+*Narrowed by ADR-029: a second outbound request exists, made only by the explicit `asoy fetch-ocr-models` setup command, because the OCR weights cannot be redistributed. The claim this entry protects — that **running** Asoy, and converting a book in particular, transmits nothing — is unchanged and is now enforced by a test.*
+
 **Why.** A privacy-first local application that phones home about usage undermines its own central claim. The absence of telemetry is a feature, and it must be verifiable by anyone reading the source — which, being open source, they can.
 
 **Rejected.**
@@ -355,6 +357,8 @@ The review screen is the demanding surface: a long list of cropped images paired
 **Date:** 2026-08-10 · **Status:** Accepted. Supersedes the engine choice in ADR-003, whose two-tier structure is unchanged.
 
 **Decision.** Both tiers run RapidOCR. The hardware tier selects the inference backend, not the engine. Tesseract and PaddleOCR are removed.
+
+*Two claims below turned out to be wrong, and ADR-029 corrects both without disturbing this decision: RapidOCR does **not** arrive at no additional cost — its ONNX Runtime backend was never in the tree, so it silently ran its PyTorch engine instead, and its model weights are downloaded on first use rather than shipped. The choice of engine stands; what it costs was understated.*
 
 **Why.** Discovered while resolving dependencies rather than while planning. RapidOCR arrives with Docling at no additional cost and executes the same PP-OCR model family that PaddleOCR uses, through ONNX Runtime instead of the PaddlePaddle framework. The models are identical, so the accuracy argument for PaddleOCR evaporates once the runtime is interchangeable.
 
@@ -743,6 +747,47 @@ Chart-against-table confusion is reported on its own named line, in both directi
 The classifier's `unknown` answer now competes with `table` on scanned tables, which are visually close to some charts. The reversal condition below is aimed squarely at that.
 
 **Would reverse this.** On decision 1: a measured run showing the `table` answer confuses charts as tables more often than it correctly types scanned tables — which would mean the label costs more in cross-family error than it earns, and the exclusion was right for a reason nobody had yet stated.
+
+---
+
+## ADR-029 - Scanned input: weights are a prerequisite, ONNX Runtime is pinned in, and torch.compile is off
+
+**Date:** 2026-08-10 · **Status:** Accepted
+
+**Decision.** Three decisions taken together, because a scanned input needs all three and each was hiding the next.
+
+### 1. The OCR weights are a checked prerequisite
+
+They are not shipped and they are not fetched during a conversion. **Redistribution permission is unestablished**: RapidOCR names Baidu as the copyright holder of the models and supplies no terms for them; PaddleOCR states Apache 2.0 for the project without saying whether the grant reaches the pretrained weights. Unestablished is blocking under ADR-011 and CLAUDE.md section 11, because licence contamination is silent, retroactive, and expensive to unwind. "Probably Apache" is not a licence.
+
+The required property is unchanged and unconditional: **a conversion makes zero network requests.** Not a smaller one, not a first-time-only one. The weights live in `%LOCALAPPDATA%\Asoy\ocr-models`, overridable, never in `site-packages` — a packaged install is read-only, and that is where RapidOCR would otherwise write them. Every model path is passed to Docling explicitly, so RapidOCR has nothing to resolve and nothing to fetch. Absent weights raise with the command to run. The fetch is `asoy fetch-ocr-models`, user-initiated, verified by checksum, and reached from nowhere else. The environment check reports weight presence alongside its Ollama checks, because this is now the second thing that must be in place.
+
+**Rejected.**
+- *Shipping the weights* — blocked on the licence, and it would otherwise have been comfortable: measured at 31.7 MB for the ONNX set against ADR-020's ~470 MB of PyTorch, so roughly 6% for a category of book the product exists to handle.
+- *Documenting a second outbound request and leaving the behaviour* — the cheapest option, and it puts an asterisk on the headline claim that is discoverable only by reading the docs. ADR-002 argued the privacy claim survives scrutiny only when it is unconditional.
+- *Dropping scanned-input support for v1* — removes the books that most need description, and OCR is already built.
+
+**Would reverse this.** A definitive redistribution grant for the PP-OCR weights flips this back to shipping them, which is the better user experience: no setup step, and one that would otherwise recur on every reinstall.
+
+### 2. `onnxruntime` joins the manifest
+
+ADR-019 specifies ONNX Runtime as RapidOCR's backend on both tiers. `onnxruntime` was never in the tree, so RapidOCR silently fell back to its PyTorch engine and announced it only in a log line nobody read. **This makes the behaviour match the recorded decision rather than changing it.** The licence scan was run on the full transitive tree before it landed (invariant 6): onnxruntime is MIT, its additions are Apache, BSD, and MIT, and the tree has no GPL-family entry.
+
+`onnxruntime-gpu` remains separate and undecided under ADR-021.
+
+**Rejected.** *Amending ADR-019 to accept the torch engine* — its reasoning holds, and the fallback was an accident rather than a choice. Ratifying an accident because it is already running is how a decision log stops describing the system.
+
+### 3. `torch.compile` is disabled for Docling's layout model
+
+TorchInductor shells out to a C++ compiler. `cl.exe` is absent on essentially every Windows machine that has not installed Visual Studio, so every scanned PDF failed with `InvalidCxxCompiler` — which reads as a broken product rather than a missing toolchain. It is disabled in-process, not by asking users to set an environment variable: a documented workaround that every user must apply is not a fix.
+
+Recorded here rather than left as a code comment, per the playbook lesson that a decision living only in a comment has the force of a decision and none of the protection.
+
+**Would reverse this.** A Docling or PyTorch release that no longer needs a C++ toolchain on this path, or a measured speed loss large enough to justify shipping a compiler.
+
+**Consequences.** Setup gains a second prerequisite step, and it is the one ADR-008 already identified as the product's largest support cost. It applies only to scanned input; EPUB, DOCX, and ODT need nothing. The dependency tree grows by onnxruntime and its transitive additions.
+
+Three defects on one route went unnoticed while 304 tests passed, because every test converted a declarative format and none of them touched OCR. That gap is closed by an end-to-end conversion of a generated image-only PDF, which cannot pass unless all three are fixed. See INC-001 through INC-003.
 
 ---
 

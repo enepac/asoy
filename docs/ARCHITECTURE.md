@@ -1,9 +1,9 @@
 # ARCHITECTURE
 
 **Project:** Asoy
-**Document status:** Specification, partly built. Describes the system as it is intended to exist when shipped. Sections 4.1 through 4.4, 4.8, and 4.9 exist in code for the text-only path; the OCR layer (4.5), block classifier (4.6), and description generator (4.7) do not, and neither does checkpointing or the review UI.
+**Document status:** Specification, partly built. Describes the system as it is intended to exist when shipped. Sections 4.1 through 4.6, 4.8, and 4.9 exist in code; the description generator (4.7) does not, and neither does checkpointing or the review UI.
 **Applies to:** No released version yet. This describes the target for 1.0.0.
-**Last verified against code:** 2026-08-10, at the commit adding the Calibre subprocess and the `asoy convert` command.
+**Last verified against code:** 2026-08-10, at the commit making scanned input work (ADR-029).
 
 > This document describes what Asoy *is*, not what it was planned to be. If the code and this document disagree, the code is right and this document is a bug. Update it in the same commit as the change.
 >
@@ -27,7 +27,7 @@ All processing happens on the user's machine. No book content, no page image, an
 
 These are architectural commitments, not preferences. Changing any of them is a redesign, not a feature.
 
-- **No network egress of user content.** The application makes no outbound request carrying any part of a user's document. The only permitted network activity is the update check (see section 9).
+- **No network egress of user content.** The application makes no outbound request carrying any part of a user's document, and a conversion makes no outbound request at all. Two calls exist, neither on the conversion path: the update check and the user-invoked OCR model download (see section 9).
 - **No DRM circumvention.** Asoy processes files the user can already open. It contains no DRM-stripping code and loads no plugins that provide it. DRM-protected files are rejected at ingestion with a clear message.
 - **No cloud fallback.** There is no degraded online mode. If the local model cannot run, the pipeline reports it rather than substituting a remote service.
 - **Verbatim text.** Author text is transcribed, never summarised, paraphrased, corrected, or abridged. Only non-text blocks are described, and descriptions are always marked as such in the output.
@@ -126,6 +126,12 @@ Both tiers run **RapidOCR**, which executes the PP-OCR model family through a se
 
 - **CPU tier:** ONNX Runtime on CPU.
 - **GPU tier:** ONNX Runtime with CUDA, falling back to CPU if the device is unavailable.
+
+`onnxruntime` is a direct dependency. Without it RapidOCR falls back to a PyTorch engine, which is a different engine from the one ADR-019 chose and announces itself only in a log line (INC-003).
+
+**The model weights are a checked prerequisite, not shipped and not downloaded during a conversion.** Redistribution permission for them is unestablished, so they are fetched once by `asoy fetch-ocr-models` into a directory Asoy controls, and every model path is passed to Docling explicitly so nothing is left for the OCR engine to resolve or retrieve. A conversion with the weights absent fails with the command to run. The environment check (section 6) reports their presence. See ADR-029.
+
+Docling's layout model runs with `torch.compile` disabled, because TorchInductor requires a C++ toolchain that is absent on essentially every user machine (ADR-029).
 
 One engine across both tiers means OCR output differs by speed rather than by model, so a page that reads correctly on one tier reads correctly on the other. See ADR-019.
 
@@ -279,7 +285,12 @@ Asoy's own code is Apache 2.0. The patent grant is the reason for Apache over MI
 
 ## 9. Network behaviour
 
-Exactly one outbound request exists: the update check against the release endpoint. It carries the current version and nothing else — no document names, no usage data, no identifiers. It is disableable in settings, and disabling it disables no other functionality.
+**A conversion makes no network request at all.** Not a small one, not a first-time-only one. This is the property the rest of this section serves, and it is enforced by a test rather than asserted (ADR-029).
+
+Asoy makes two outbound requests in total, and neither happens while a book is being converted:
+
+1. **The update check**, against the release endpoint, during normal running. It carries the current version and nothing else — no document names, no usage data, no identifiers. It is disableable in settings, and disabling it disables no other functionality.
+2. **The OCR model download**, made only by the explicit `asoy fetch-ocr-models` setup command. It exists because the PP-OCR weights cannot be redistributed (ADR-029), so they are a checked prerequisite in the manner ADR-008 uses for Ollama. It runs when a user asks for it and at no other time; a conversion with the weights missing fails with a remedy rather than fetching them.
 
 Ollama's model pull is a user-initiated action performed through Ollama, outside Asoy's process.
 

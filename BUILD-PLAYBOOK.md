@@ -107,6 +107,8 @@ Four things follow.
 
 **Write the claim in the past tense.** Present tense breaks on the next change; past tense ages. A row reading *in sync with `origin/main` at `2abb065`* is a claim about now and is false the moment either side moves. The same fact as *`origin/main` was at `2abb065` when this was verified* stays true forever, and a reader comparing it to the tree learns the file's age instead of finding a lie. The symptom that exposed it: three consecutive pushes, each needing a correcting commit to that one row. **A line that needs fixing on a schedule is a line written in the wrong tense.**
 
+**A passing suite measures the routes it exercises and says nothing about the others.** Asoy ran 304 green tests while every OCR route was dead — three separate defects stacked on one path, each hiding the next, found only when someone converted a scanned PDF by hand. Every test converted a declarative format, and those never touch OCR. **A route with no end-to-end test does not stay at zero defects; it accumulates them silently and they surface together.** Count routes, not tests, and give each one a test that runs it end to end even if that test is slow and awkward.
+
 **Sweep for the claim, do not fix the file you noticed.** The same sentence gets copied into every document in the set, and into the playbook that recommended it. Grep the phrase across the repository and fix every instance in one commit, or the next session finds the copy you missed and reasons from it.
 
 The general form: **a claim about project state is a claim with an expiry date, and it belongs where it will be re-read, not where it was convenient to write.** The as-built documents are worth the discipline. The status line is the price of writing them early.

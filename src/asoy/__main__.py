@@ -58,6 +58,17 @@ def _build_parser() -> argparse.ArgumentParser:
         default=Path.cwd(),
         help="directory to write the .md and .txt into (default: the current directory)",
     )
+
+    subcommands.add_parser(
+        "fetch-ocr-models",
+        help="download the OCR models needed for scanned PDFs and images, then exit",
+        description=(
+            "Download the OCR models once, into a directory Asoy controls. Scanned PDFs and "
+            "images need them; EPUB, DOCX, and ODT do not. This is the only command that "
+            "downloads them — a conversion never does, so that converting a book makes no "
+            "network request at all."
+        ),
+    )
     return parser
 
 
@@ -81,10 +92,36 @@ def _fail(detail: str, remedy: str = "") -> int:
     return 1
 
 
+def _fetch_ocr_models_command() -> int:
+    """Download the OCR weights. The one command in Asoy that fetches them (ADR-029)."""
+    from asoy.ocr import OcrWeightsMissing, fetch, models_dir, verify
+
+    where = models_dir()
+    print(f"OCR models directory: {where}")
+
+    try:
+        result = fetch(where)
+    except OcrWeightsMissing as exc:
+        return _fail(exc.detail, exc.remedy)
+
+    problems = verify(where)
+    if problems:
+        return _fail(
+            "The downloaded OCR models did not verify: " + " ".join(problems),
+            "Delete the directory above and run this command again.",
+        )
+
+    print()
+    print(f"All {len(result.present)} OCR models present and verified.")
+    print("Scanned PDFs and images will convert now, without any further download.")
+    return 0
+
+
 def _convert_command(book: Path, output_dir: Path) -> int:
     """Run one conversion. Every failure prints what happened and what to do about it."""
     from asoy.export import OutputVerificationError
     from asoy.fences import FenceError
+    from asoy.ocr import OcrWeightsMissing
     from asoy.orchestrator import ChapterCountMismatch, ConversionRefused, convert
     from asoy.parser import ParseError
     from asoy.router.ebook_convert import CalibreError
@@ -96,7 +133,7 @@ def _convert_command(book: Path, output_dir: Path) -> int:
 
     try:
         result = convert(book, output_dir, tier=tier.tier)
-    except (ConversionRefused, CalibreError) as exc:
+    except (ConversionRefused, CalibreError, OcrWeightsMissing) as exc:
         return _fail(exc.detail, exc.remedy)
     except ParseError as exc:
         return _fail(str(exc), "A file Docling cannot read cannot be converted.")
@@ -133,6 +170,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.version:
         print(f"asoy {installed}")
         return 0
+
+    if args.command == "fetch-ocr-models":
+        return _fetch_ocr_models_command()
 
     if args.command == "convert":
         return _convert_command(args.book, args.output)

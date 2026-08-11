@@ -21,6 +21,10 @@ classifiers = [
 dependencies = [
     "docling>=2.118.1",
     "nvidia-ml-py>=13.610.43",
+    # ADR-019 specifies ONNX Runtime as RapidOCR's backend on both tiers. Without it RapidOCR
+    # silently falls back to its PyTorch engine, which is a different engine than the one the
+    # decision records (ADR-029, INC-003). MIT; its transitive additions are all permissive.
+    "onnxruntime>=1.28.0",
     # Docling's OpenDocument backend. Apache-2.0; its only runtime dependency is lxml
     # (BSD-3-Clause), already in the tree. Required for the ODT path in ADR-023.
     "odfdo>=3.24.3",

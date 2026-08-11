@@ -11,7 +11,7 @@ Converts books into text prepared for audiobook narration, entirely on your own 
 - Reads common ebook and document formats (EPUB, PDF, DOCX, PPTX, XLSX, HTML, images, plain text) and extracts the author's text **verbatim**, never summarised or corrected.
 - Turns every non-text element (photographs, illustrations, tables, diagrams, charts) into a written narrative description placed in its correct reading position, so a listener hears an account of the visual content instead of silence.
 - Marks every generated description with an explicit delimiter carrying its type and confidence, which keeps descriptions distinguishable from author text and makes voice switching possible downstream.
-- Runs fully locally. No book content, page image, extracted text, or filename is transmitted anywhere. The only outbound request is an optional version check that sends the version string and nothing else.
+- Runs fully locally. No book content, page image, extracted text, or filename is transmitted anywhere, and converting a book makes no network request at all. Two outbound calls exist, neither during a conversion: an optional version check that sends the version string and nothing else, and a one-off download of the text-recognition models when you run the setup command for them.
 
 ## Status
 

@@ -84,7 +84,7 @@ the convention above. It becomes dated when the release actually ships.
 ### Privacy
 
 - All processing is local. No book content, page image, extracted text, or filename is transmitted anywhere.
-- The only outbound network request is a version check, which sends the version string and nothing else. It can be disabled in settings.
+- Converting a book makes no network request at all. Two outbound calls exist and neither happens during a conversion: a version check, which sends the version string and nothing else and can be disabled in settings, and a one-off download of the text-recognition models, which runs only when you ask for it.
 - No account, no telemetry, no analytics, no crash reporting, no installation identifier.
 
 ### Known limitations at release

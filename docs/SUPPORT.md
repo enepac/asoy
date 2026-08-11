@@ -41,6 +41,24 @@ If Asoy says Ollama is unreachable but Ollama is running, it is usually on a non
 
 ---
 
+## Setup: text recognition for scanned books
+
+Scanned books, photographed pages, and image-only PDFs need text-recognition models. EPUB, DOCX, and ODT do not, so if those are all you convert you can skip this.
+
+Run once:
+
+```
+asoy fetch-ocr-models
+```
+
+It downloads about 32 MB into your local application data folder and verifies each file. After that, scanned input converts with no further download.
+
+**Why this is a separate step rather than part of the install.** The models are Baidu's, published without terms that permit redistributing them, so Asoy cannot ship them inside its installer. The same reasoning applies to Ollama's models, which Ollama downloads for the same kind of reason.
+
+**Why Asoy does not just download them when you convert.** It would work, and it would mean that converting a book — the one action where "nothing leaves your machine" matters most — quietly contacted a server. Asoy makes no network request at all while converting. If the models are missing it tells you and stops, rather than fetching them behind the action.
+
+---
+
 ## Hardware tiers and what to expect
 
 Asoy runs in one of two modes, chosen automatically based on your hardware. The active tier is always shown in the interface.
@@ -172,6 +190,7 @@ The `.txt` has all of this stripped out: descriptions become ordinary prose, hea
 | "Ollama not found" | Ollama is not installed | Install it, then restart Asoy |
 | "Ollama unreachable" | Installed but not running, or on a different port | Start Ollama; check its port setting |
 | "Model not available" | The model has not been downloaded | Run the `ollama pull` command Asoy shows you |
+| A scanned PDF says the OCR models are missing | The one-off text-recognition download has not been run | Run `asoy fetch-ocr-models`; see Setup above |
 | Switched to CPU tier partway through | Video memory ran out | Close other GPU applications; expected on smaller cards |
 | Conversion is very slow | CPU tier, long book | Expected. It will resume if interrupted |
 | Text garbled or missing | Scanned source, poor recognition | Check flagged pages in the review screen |

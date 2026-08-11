@@ -13,11 +13,11 @@
 | | |
 |---|---|
 | Version | 0.1.0 (`pyproject.toml`, confirmed by `asoy --version`) |
-| Branch / commit | `main` at `82393cc`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
+| Branch / commit | `main` at `6a32031`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
 | Push state | `origin/main` was at `1c88dad` when this was verified, behind the local branch above. Anything reading this repository from GitHub sees that commit, not the one in the row above. **State the sync point, never a count** — a count is wrong the moment either side moves, and this line has gone stale twice that way |
-| Tests | 304 passing, 2 deselected (fences 59, classifier 42, classifier-reference 39 of which 2 need Ollama, environment 36, pipeline 38, tiers 26, router 24, smoke 22, calibre 20) |
-| Highest ADR | ADR-028 |
-| Dependency tree | 117 packages resolved; license scan shows no GPL-family or AGPL entry |
+| Tests | 321 passing, 2 deselected (fences 59, classifier 42, classifier-reference 39 of which 2 need Ollama, pipeline 38, environment 36, tiers 26, router 24, smoke 22, calibre 20, ocr 17 of which 1 converts a real scanned PDF) |
+| Highest ADR | ADR-029 |
+| Dependency tree | 120 packages resolved; license scan shows no GPL-family or AGPL entry |
 | Release | None. No installer, no signing, no users |
 
 ## What works
@@ -27,7 +27,8 @@ Each line names the command that proves it. All were run.
 | Capability | Proof |
 |---|---|
 | Hardware tier detection via NVML | `uv run asoy --tier` → GPU, RTX 3050, 6.00 GiB |
-| Ollama environment check | `uv run asoy --check` → ready, exit 0 |
+| Ollama and OCR-model environment check | `uv run asoy --check` → ready, exit 0 |
+| Scanned PDF → `.md` + `.txt`, OCR reading the page | `uv run pytest tests/test_ocr.py` |
 | EPUB → `.md` + `.txt`, pictures and tables included | `uv run asoy convert book.epub -o out` |
 | ODT → same, no Calibre involved | `uv run asoy convert book.odt -o out` |
 | The delimiter: emit, parse, and the round trip | `uv run pytest tests/test_fences.py` |
@@ -45,16 +46,18 @@ Each line names the command that proves it. All were run.
 - **Desktop shell** (4.1). Window opens; the JS bridge returns version, tier, and environment. Missing: file picker, job queue, progress reporting, review screen. Nothing can be converted from the UI — only from `asoy convert`.
 - **Parser** (4.4). Chapters, headings, verbatim text, and non-text blocks carried in reading order. Tables arrive with their cells when Docling extracts them cleanly.
 - **Assembler and exporter** (4.8, 4.9). The delimiter is defined, emitted, and parsed (ADR-025). Every picture becomes a `failed` description with placeholder text, because there is no generator to produce a real one — correct interim behaviour under invariant 7, not finished behaviour.
+- **OCR layer** (4.5). RapidOCR on the ONNX engine, with weights as a checked prerequisite fetched by `asoy fetch-ocr-models` (ADR-029). A scanned PDF converts end to end. Missing: the confidence floor and the review flagging that ARCHITECTURE 4.5 describes.
 - **Block classifier** (4.6). Caption pre-pass, tier-model call, abstention rule, and the measurement harness all exist (ADR-026, ADR-027, ADR-028). Its answer set includes `table`, because a scanned table arrives as a picture block (ADR-028). **Not wired to anything**: the parser still types every picture `unknown` and nothing calls `classify`. It landed with its harness rather than with a consumer, so wiring it into the parser is a separate change.
 - **Format router** (4.3). Complete for every accepted format, but only EPUB and ODT have been converted end to end. PDF, DOCX, PPTX, XLSX, HTML, images, and plain text route correctly and have **never been run through a conversion**.
 
 ## Not started
 
-- **OCR layer** (4.5) and **description generator** (4.7). Both are docstring-only stubs in `src/asoy/`. Until the generator exists every picture description is `failed`.
+- **Description generator** (4.7). A docstring-only stub in `src/asoy/describe/`. Until it exists every picture description is `failed`.
 - **Update check** (9), installer, and code signing.
 
 ## Open gaps and unresolved questions
 
+- **Three OCR defects were live simultaneously and none was visible from the suite** (INC-001 to INC-003), because every test converted a declarative format. Closed by an end-to-end scanned-PDF test; the lesson is in BUILD-PLAYBOOK.
 - **The Calibre path has never run against the real `ebook-convert`.** Calibre is not installed on the development machine; every test drives a generated `.cmd` stand-in that mimics its exit codes and output. The one-off check to run once it is available is in `RUNBOOK` §3 under *Outstanding manual verification*.
 - **The CPU tier has never been exercised.** The development machine detects GPU. `moondream:v2` is not pulled, so the CPU-tier model tag in `environment.py` remains unverified — a wrong tag would present as a "model not pulled" message that pulling does not fix. The GPU tag `qwen3-vl:4b` is confirmed by `asoy --check` passing.
 - **GPU-tier conversion speed is not what `ARCHITECTURE` §5 implies** (ADR-021). The tier delivers better descriptions but not faster conversion; the layout pass and OCR both run on CPU. Unmeasured, and no benchmark exists because no full conversion has been timed.
