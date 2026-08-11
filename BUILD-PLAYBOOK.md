@@ -231,6 +231,12 @@ Right for feature work. The code surface builds, tests, commits, and reports. Yo
 
 **The failure mode of over-gating is invisible while it happens.** Each step looks careful. What it actually produces is one round trip per commit through a surface that cannot run the code, while the surface that can run it waits for instructions.
 
+### An ask-first list routes to a person, so say which person
+
+**An ask-first list is a routing rule, and it routes to a human.** If it does not name who is asked, it will be read as an escalation to whichever surface issued the instruction, and every finding becomes a round trip through a surface that cannot run the code. Asoy's list said "do not change without asking" and named nobody; the reading reached a module docstring, which recorded that its prompt would be approved "on the planning surface." One session sent five findings that way and the code surface had to correct all five rulings.
+
+Note what this is: the step-gating failure above, recurring one level down. Gating was released at the step level and reattached at the level of findings, which is why the earlier fix did not prevent it. Releasing it takes both halves — name who is asked, and say that everything not on the list is finished rather than reported.
+
 ### The convention that makes loose delegation safe
 
 Add this to `CLAUDE.md`:
@@ -295,6 +301,7 @@ The same test applies to trigger lists. Asoy's `STATE.md` names three triggers a
 | Documents claimed a shipped product that did not exist | Honest status line on each, present-tense prose retained |
 | Chat surface wrote implementation specs instead of delegating | Outcomes and constraints, not designs |
 | Strict step gating continued past setup into feature work | Release it once foundations are in the repository |
+| The same gating reattached at the level of findings, because the ask-first list named no one to ask | Say who is asked — the maintainer, in the session — and that everything off the list is finished, not escalated |
 | Every report pasted back in full for sorting | DECISIONS NEEDED section, sorted by the code surface |
 | Expected counts in handoffs were wrong | Abort-on-mismatch; the code surface reports rather than adjusts |
 | A dependency ceiling persisted after its cause was removed | Diagnose before assuming; a lockfile can hold a stale pin |

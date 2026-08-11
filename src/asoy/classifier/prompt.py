@@ -9,7 +9,7 @@ module so that approving or replacing it is a one-file change.
 
 Two things must both happen before this stops being provisional:
 
-1. It is approved, or replaced, on the planning surface.
+1. It is approved, or replaced, by the maintainer, asked in-session (CLAUDE.md section 5).
 2. It is measured against the committed reference set (`reference/classifier/`), which does not
    exist yet. Until it does, every acceptance number for this component is unmeasured. "It looks
    reasonable" is not evidence — CLAUDE.md section 9 names that failure by name.

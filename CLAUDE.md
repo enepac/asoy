@@ -71,6 +71,8 @@ Where a mistake costs the most. Treat these in descending order of care.
 
 Not forbidden — but they were decided deliberately, and a session that changes one silently has done damage that is hard to spot in review.
 
+**Ask the maintainer, in this session, directly.** Asking does not mean routing the question to another surface — an ask-first item is not a handoff back to whoever issued the instruction, and sending it to a surface that cannot run the code buys a round trip and loses the working tree. Put the question here: numbered options, a recommendation with its reasoning, one question at a time, and wait for the answer before changing the item.
+
 - The delimiter's shape or attribute names.
 - Which model each tier uses.
 - Anything in the dependency manifest.
@@ -121,7 +123,14 @@ UI framework: `pywebview` (BSD, WebView2 backend on Windows) · Language: `Pytho
 5. **Update the affected documentation in the same commit.**
 6. **Test on both tiers** where tier-dependent, and on a clean machine where install-dependent.
 7. **If you could not complete something, say so explicitly.** An honest gap list beats a silent omission, and "should work" is never reported as "works."
-8. **End the report with a DECISIONS NEEDED section, or state that it is empty.** It lists anything touching a §3 invariant, anything on the §5 ask-first list, anything contradicting a recorded ADR, and any ambiguity the specification did not settle. One line each. Everything else is implementation and stays in Claude Code.
+8. **DECISIONS NEEDED is the stop condition, not a closing report.** After finding a defect or an unexpected result, continue: diagnose it, fix it, guard it, document it, and commit, in the same session, without waiting for instruction. Stop and ask only when one of these is true:
+   - it touches a §3 invariant;
+   - it is on the §5 ask-first list;
+   - it contradicts a recorded ADR;
+   - the deciding fact lives only in the maintainer's head — a preference, a priority, a scope call, or what "good enough" means here;
+   - it needs something outside this machine — a licence answer nobody publishes, a book, hardware, a platform, or money.
+
+   When stopping, present the decision the way a decision should be presented: numbered options, a recommendation, the reasoning, and what would flip it. Do not merely report that a decision is needed. Everything else is implementation and is finished, not escalated; end the report by saying the block is empty.
 
 ## 9. Mistakes to avoid here specifically
 
