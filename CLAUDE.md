@@ -85,7 +85,11 @@ Not forbidden — but they were decided deliberately, and a session that changes
 Match what is here rather than importing habits from elsewhere.
 
 - **Documentation is updated in the same commit as the change.** `docs/ARCHITECTURE.md` describes the system as-built; if your change makes it wrong, fixing it is part of your change, not a follow-up.
-- **`docs/STATE.md` is regenerated in the same commit whenever a component lands, an ADR is added, or a gap opens or closes.** It is the one file a fresh session reads to answer "where are we", so a stale one is worse than none — it will be believed. Regenerate it by running the commands it cites, not by editing the lines you think changed; every claim in it is verified or labelled unverified, and a line carried forward untested stops being either. Name the change in the DECISIONS NEEDED block so it is reviewable.
+- **`docs/STATE.md` is regenerated in the same commit whenever a component lands, an ADR is added, or a gap opens or closes.** It is the one file a fresh session reads to answer "where are we", so a stale one is worse than none — it will be believed. Name the change in the DECISIONS NEEDED block so it is reviewable.
+
+  Those three are the whole trigger list. The test count is deliberately not on it: it moves on nearly every commit, and a trigger that always fires carries no signal. STATE.md names its own sync point, so every figure in it is as of that commit and a reader who sees a count that does not match `main` learns the file's age, which the sync line already told them.
+
+  **When it is regenerated for any reason, re-run every command it cites and replace the output — all of it, not only the figures that prompted the regeneration.** Do not edit the lines that look stale: the ones that look current are exactly where a wrong number survives. A figure written from memory is indistinguishable from a verified one once it is in the file, and this file's whole value is that it is a report rather than a recollection.
 - **Decisions get an ADR.** Anything a future maintainer would question belongs in `docs/DECISIONS.md` with its rejected alternatives and reversal condition.
 - **Errors are surfaced, never swallowed.** Subprocess stderr is captured and shown. A silent failure is a defect independent of its cause.
 - **Failure paths are written alongside the happy path**, not after. The unhappy path is where "looks finished" hides.

@@ -239,6 +239,23 @@ Loose delegation means most of what is learned about the method is learned insid
 
 Two halves carry the weight. **Same commit**, because a lesson reconstructed from memory weeks later is a worse lesson — the specifics that made it useful are the first thing to go. And **narrow**, because a playbook revised on every commit stops being readable in one sitting, which is the only property that makes it worth reusing.
 
+### Word conventions as procedures, not as intentions
+
+A convention is followed by someone in a hurry who has already decided what they are doing. Its wording is the last thing standing between that and a plausible shortcut, so it should describe **an action to perform**, not **a state to achieve**.
+
+The difference is not stylistic. "Keep `STATE.md` up to date" and "update the file" both leave the reader to decide which lines are stale, and deciding is where the error enters — the lines that look current are exactly the ones nobody re-checks. "Re-run the commands it cites and replace the output" leaves nothing to decide.
+
+The case that produced this. Asoy's `STATE.md` convention already said *regenerate by running the commands, not by editing the lines you think changed*. Regenerating the file for an unrelated reason, the code surface refreshed a table of per-file test counts and wrote one of them — 61 — from memory. The real figure was 59. Running the command caught it before the commit.
+
+Nothing was shipped wrong, and that is the point rather than a mitigation. **The convention held; the agent following it did not.** A rule that depends on the reader not taking an obvious shortcut is a rule that works until someone is moving quickly, and everyone is eventually moving quickly. The fix is not more discipline, it is wording with no shortcut in it.
+
+Two tests when writing one:
+
+- **Can it be satisfied by judgement?** If a reader can comply by deciding something looks fine, they will, and the times that judgement is wrong are the times it mattered.
+- **Does it say what to run, or what to end up with?** Prefer the first. A command has an output you can paste; a desired state has an impression you can form.
+
+The same test applies to trigger lists. Asoy's `STATE.md` names three triggers and explicitly excludes the test count, because a trigger that fires on nearly every commit turns the list into "always" and destroys its signal. **Say what is excluded and why**, or the next reader adds it back as an obvious omission.
+
 ---
 
 ## 5. Principles that earned their place
