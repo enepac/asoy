@@ -149,13 +149,39 @@ This component is where the product's name is earned. Everything upstream of it 
 
 ### 4.8 Assembler
 
-Emits the canonical Markdown. Author text is transcribed verbatim. Chapter structure is preserved as headings. Each description is wrapped in an explicit delimiter carrying its block type and confidence, so downstream consumers can switch voice, insert a pause, or skip descriptions entirely.
+Emits the canonical Markdown. Author text is transcribed verbatim. Chapter structure is preserved as headings. Each description is wrapped in an explicit delimiter carrying its type, confidence, and status, so downstream consumers can switch voice, insert a pause, or skip descriptions entirely.
 
-The delimiter is the output contract. It is a public interface — changing its shape is a breaking change and requires a major version bump.
+The delimiter is an HTML comment fence (ADR-025). Three markers exist:
+
+```
+<!-- asoy:document version="1" tier="gpu" model="qwen3-vl:4b" -->
+
+<!-- asoy:description type="chart" confidence="0.82" status="ok" -->
+Description prose here.
+<!-- /asoy:description -->
+
+<!-- asoy:text -->
+# Author's own hash, not a chapter heading.
+<!-- /asoy:text -->
+```
+
+The header is the first line of every `.md` and records the tier and model the job ran under, which is what makes invariant 8 a property of the file rather than only of the interface.
+
+`type` is one of `photograph`, `illustration`, `table`, `diagram`, `chart`, `unknown`. The set is closed for v1; adding a member is a MINOR release. `status` is `ok` or `failed`, and a failed description keeps its type and carries readable placeholder text rather than being omitted. All three attributes are always present, always in that order, and a parser may rely on it.
+
+**`confidence` is an uncalibrated heuristic, not a probability.** It is derived from the model's response and the block's classification certainty, and its purpose is to order descriptions by how much they are worth reviewing. It has never been calibrated against ground truth: `0.80` does not mean eight times in ten.
+
+**Author text is never escaped.** A backslash inserted to tame a Markdown metacharacter is a character a naive engine reads aloud. Where a block would otherwise be read as structure — a line beginning with `#`, `>`, a list marker, a pipe — it is wrapped in `asoy:text` instead. The fence appears only where it is needed. The only characters Asoy adds to an emitted file are the markers and the `#` of a heading.
+
+Emitting and parsing both live in `asoy/fences.py`, so a change that breaks the format fails a round-trip test rather than reaching a user's pipeline.
+
+The delimiter is the output contract. It is a public interface — changing a marker's shape, renaming an attribute, or reordering them is a breaking change and requires a major version bump.
 
 ### 4.9 Exporter
 
-Writes two artifacts per job: the canonical `.md`, and a flattened `.txt` in which delimiters are removed and descriptions appear inline as plain prose. The `.txt` is a convenience for pipelines that cannot parse the delimiter; the `.md` is the source of truth and the only format from which other formats are derived.
+Writes two artifacts per job: the canonical `.md`, and a flattened `.txt` in which every fence is removed, descriptions appear inline as ordinary prose, author text is unchanged, and headings become plain lines. The `.txt` carries none of Asoy's own syntax, because its purpose is to serve a pipeline that cannot parse the delimiter. The `.md` is the source of truth and the only format from which other formats are derived.
+
+Both are rendered from the same document object rather than one being derived by text substitution from the other, and a test asserts that stripping the `.md` produces the `.txt`, so a consumer holding only the Markdown can reproduce it.
 
 SSML is not currently emitted. When added, it will be generated from the Markdown rather than produced by the pipeline directly.
 

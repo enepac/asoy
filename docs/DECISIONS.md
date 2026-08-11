@@ -489,4 +489,64 @@ There is no public API for this. `ConversionResult` exposes no close, no release
 
 ---
 
+## ADR-025 - The description delimiter is an HTML comment fence
+
+**Date:** 2026-08-10 · **Status:** Accepted. Settles the shape ADR-006 reserved, and closes the open edge left by ADR-022.
+
+**Decision.** The delimiter is a pair of HTML comments. Three markers exist and no others.
+
+A document header, the first line of every `.md`:
+
+```
+<!-- asoy:document version="1" tier="gpu" model="qwen3-vl:4b" -->
+```
+
+A description:
+
+```
+<!-- asoy:description type="chart" confidence="0.82" status="ok" -->
+Description prose here.
+<!-- /asoy:description -->
+```
+
+Author text needing disambiguation:
+
+```
+<!-- asoy:text -->
+# Author's own hash, not a chapter heading.
+<!-- /asoy:text -->
+```
+
+`type` is one of `photograph`, `illustration`, `table`, `diagram`, `chart`, `unknown` — a closed set for v1, to which adding a member is a MINOR release. `confidence` is 0.00 to 1.00 at two decimals. `status` is `ok` or `failed`. All three are always present, always in that order, and a parser may rely on it.
+
+**Why this shape.** Four properties, and it is the only candidate that has all four.
+
+It is **valid CommonMark**, so it survives every Markdown parser rather than depending on one. It is **invisible when rendered**, so the `.md` reads as a clean book to a human opening it in any viewer — the delimiter costs the primary artifact nothing. It is **trivially strippable** for the flattened `.txt`, which is a line-oriented transformation rather than a parse. And its **attributes extend without a major version**: a new attribute is additive, which is exactly the axis ADR-006 needs to stay cheap, since the attributes are where confidence, provenance, and future signals will accumulate.
+
+**The decisive argument is collision.** Everything above is a convenience. The requirement is that a book cannot forge a delimiter — that no arrangement of the author's own text can produce something a downstream pipeline reads as Asoy's description, because that would let a book fabricate content that gets read in a different voice or skipped entirely. Author text will essentially never contain the string `<!-- asoy:description`, and where it does, the block is wrapped in a text fence and the parser treats a text fence's body as opaque. That is proved rather than asserted: `tests/test_fences.py` renders each of Asoy's own markers as author text and requires them back as author text.
+
+**On confidence.** It is an uncalibrated heuristic derived from the model's response and the block's classification certainty. It orders descriptions by how much they are worth a human's attention. **It is not a probability**, it has never been calibrated against ground truth, and 0.80 does not mean eight in ten. Stated here and in ARCHITECTURE 4.8 because a two-decimal number in a machine-readable attribute invites exactly the reading it does not support.
+
+**Rejected.**
+- *Fenced code blocks with an info string* — `​```asoy-description type="chart"`. Unambiguous and easy to parse, and it renders as a code block: monospaced in every viewer, and read aloud as code by a pipeline that does not know better. The description is prose and must look like prose.
+- *MyST-style directive containers* — `:::{asoy-description}`. Expressive and well-specified, and not CommonMark. In any plain Markdown viewer the colons appear as literal text, which puts Asoy's syntax in front of a reader in the one artifact meant to read as a book.
+- *A sentinel character or unusual Unicode delimiter* — compact, and it collides. The whole argument above rests on a delimiter no book will contain by accident.
+- *A JSON sidecar carrying descriptions by offset* — rejected in ADR-005 already, and offsets into a file the user may edit are fragile in a way inline markers are not.
+
+**The escaping policy, which closes ADR-022's open edge.** **Asoy never modifies a byte of author text, and never escapes it.** ADR-022 left this unsettled and named escaping-everything as the obvious future change. It is not the change that gets made. A backslash inserted to tame a Markdown metacharacter is a character a naive text-to-speech engine reads aloud, which turns a rendering ambiguity into an audible defect — the same reasoning that rejected code fences above.
+
+Where a block would be misread as structure, it is wrapped in `asoy:text` instead. The fence is used only where it is needed, so ordinary prose is unadorned; every line of a block is checked rather than only the first, because a heading or a list marker can interrupt a paragraph.
+
+Only two things in an emitted file are Asoy's characters: the markers, and the `#` of a heading. That is what keeps the parse-to-emit chapter assertion meaningful, and it is now checkable by parsing the artifact rather than by scanning it for lines starting with a hash.
+
+**Consequences.** There is one case the format cannot represent: author text containing a line that is exactly `<!-- /asoy:text -->`. It cannot be escaped, by the rule above, and it cannot be wrapped, because it would close its own fence. Asoy raises and writes nothing rather than emitting a file that misparses itself. This requires a book to contain Asoy's closing marker verbatim on its own line; it is recorded here because a silent corruption would be far worse than a loud refusal, not because it is expected.
+
+The header carries `tier` and `model` on every job, which makes invariant 8 a property of the output rather than only of the UI: a file that reads differently from another can always be traced to what produced it.
+
+The `.md` and `.txt` are both rendered from one document object, and the module that emits the format also parses it. A round-trip test is therefore the primary guard: emit, parse, and require the result identical.
+
+**Would reverse this.** Nothing about the shape, short of a major version. Attribute additions are expected and are the mechanism this format was chosen for. If a fourth marker is ever needed, it takes the same `<!-- asoy:name -->` form, and the fencing rule already treats any `<!-- asoy:` line in author text as needing a fence, so text emitted today cannot forge a marker invented tomorrow.
+
+---
+
 *Companion documents: `ARCHITECTURE.md` (what the system is), `RUNBOOK.md` (how to operate it), `SUPPORT.md` (what users are told), `DATA.md` (what is held).*
