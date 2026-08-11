@@ -6,6 +6,8 @@
 > This file exists so that neither you nor an AI assistant re-litigates a settled question, and so that a choice which *looks* arbitrary later can be checked against why it was made.
 >
 > **Rules for this file.** Append new decisions; never delete old ones. When a decision is overturned, mark the original `Superseded by ADR-NNN` and leave its text intact — the reasoning that turned out to be wrong is the most useful thing in here. Every entry names what would reverse it, so a decision can be committed to now and revisited only when the world actually changes.
+>
+> **Amendments.** An ADR that defines a specification may be amended in place when the amendment is purely additive and no consumer depends on the spec yet. Mark the amendment with its date, leave the original text intact, and point to it from the section it changes. Anything that changes, narrows, or reverses a decision gets a new ADR instead, however small. The append-only rule exists so that reasoning which turned out wrong is never erased, and an additive amendment erases nothing.
 
 ---
 

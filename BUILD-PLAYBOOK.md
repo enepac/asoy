@@ -61,6 +61,14 @@ Nine documents. Eight are written before the build and maintained during it. The
 
 **Reversal conditions.** Every ADR ends with what would reverse it. Without this, a decision log is something you argue with on every re-read. With it, the entry answers back: *access to a Mac for testing, not a volume of requests.* A decision becomes something you can commit to and stop carrying.
 
+**A stated rule for amending an append-only log.** "Append only, never edit" is the right default and it is incomplete, because some ADRs define a specification rather than settling a question — an output format, a schema, a protocol. Those grow. When the fourth attribute has to be added, the rule as written offers only a new ADR that says "as ADR-025, plus one field", and after three of those the specification is spread across four entries and no single one is current.
+
+Write the exception down before you need it, or every instance becomes a judgment call and the log's shape depends on who was asked:
+
+> An ADR that defines a specification may be amended in place when the amendment is purely additive and no consumer depends on the spec yet. Mark the amendment with its date, leave the original text intact, and point to it from the section it changes. Anything that changes, narrows, or reverses a decision gets a new ADR instead, however small.
+
+The reasoning behind the exception is what keeps it from widening. Append-only exists so that reasoning which turned out wrong is never erased. **An additive amendment erases nothing**, so it does not engage the rule at all. A change that narrows or reverses does erase, which is why the same paragraph refuses it however small it looks — and "however small" is the load-bearing clause, since a reversal that felt minor is exactly the one that gets edited in quietly.
+
 **The ask-first list in `CLAUDE.md`.** Name the things a session must not change silently: the output format, model choices, the dependency manifest, prompts, anything with an ADR. This list is also your routing rule for which surface handles a task.
 
 **The blast radius table.** Where a mistake costs most, in descending order, each with what to do about it. An AI session that knows the output writer hides silent truncation behaves differently from one that does not.
