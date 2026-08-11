@@ -617,7 +617,7 @@ It is derived from named evidence rather than from a model's opinion of itself. 
 
 - Cross-family confusion at or below 5%. Cross-family means a photograph or illustration called a diagram or chart, or the reverse — the failure that selects a wholly wrong description approach.
 - Within-family confusion (photograph against illustration, diagram against chart) recorded in a confusion matrix, uncapped for v1. Both members of a pair receive broadly similar description treatment, so the cost is real and much smaller.
-- `unknown` at or below 25%. Above that the model call is not earning its cost and the pre-pass should be doing more.
+- `unknown` at or below 25%. Above that the model call is not earning its cost and the pre-pass should be doing more. *(Replaced the same day — see the amendment below.)*
 
 **Rejected.**
 - *A dedicated ONNX image classifier* — better at the task, and it adds weights to an installer whose size is already a documented expectation. Revisit with a benchmark.
@@ -630,7 +630,25 @@ It is derived from named evidence rather than from a model's opinion of itself. 
 
 **The numbers above are unmeasured.** The committed core set does not exist yet — the books are being gathered — so nothing here has been measured against anything. The harness, the manifest format, and the bar are in place; the instrument is not. Until it lands, no claim about this component's accuracy is evidence.
 
-**Would reverse this.** On the mechanism: a measured conversion showing the per-picture model call dominates conversion time, which would make the dedicated classifier's installer cost worth paying. On the acceptance bar: a measured conversion showing within-family confusion costs more than assumed — that a photograph described by an illustration prompt is materially worse to listen to — which would cap it rather than leave it uncapped. On the floor: the measured `unknown` rate against the core set, which is what that number should be set from and currently is not.
+**Would reverse this.** On the mechanism: a measured conversion showing the per-picture model call dominates conversion time, which would make the dedicated classifier's installer cost worth paying. On within-family confusion: a measured conversion showing it costs more than assumed — that a photograph described by an illustration prompt is materially worse to listen to — which would cap it rather than leave it uncapped.
+
+On the 20% wrong-abstention bar and on `CERTAINTY_FLOOR`: **the first measured run against the core set**, which may move either number, in either direction, and should be expected to move at least one. They are a considered pair, not an evidenced one, and the run that first produces evidence is the run that settles them.
+
+### Amendment, 2026-08-10 — the abstention bar counts wrong abstentions, not all of them
+
+*The original bullet above is left in place. It is wrong in a way worth keeping, because the error is arithmetic rather than a matter of judgement and is easy to make again.*
+
+**The third bullet is replaced by three:**
+
+- **Wrong abstentions at or below 20%**, measured against the core blocks whose expected answer is a real type — roughly 50 of the 60, not all of them. Above that the model call is not earning its cost and the pre-pass should be doing more.
+- **The all-abstentions rate is reported as context and is not a bar.**
+- **The abstention rate on the ambiguous blocks is recorded and reported, uncapped for v1** — ten blocks cannot carry a threshold. It is read as a signal rather than a score: a low number there means the classifier is guessing on blocks that do not support a guess, which no other figure would reveal, since guessing right occasionally raises accuracy while being the behaviour decision 3 rejects.
+
+**Why.** The original counted every abstention against the whole set. The core holds about ten deliberately-ambiguous blocks whose correct answer *is* `unknown`, so a classifier that answered every one of them correctly and made no other mistake already read about 17% — leaving roughly 8% of the budget for actual errors. The bar charged the classifier for the behaviour decision 3 exists to protect, and would have tightened as the ambiguous group grew. Measuring wrong abstentions against the typed blocks removes the interaction entirely: the ambiguous group can be any size without moving the number.
+
+**20% is a considered starting point, not a measured one.** It moves with `CERTAINTY_FLOOR`, which is itself a placeholder — the floor sets how often the classifier abstains, so the two are one decision expressed twice and have to be set together against the same evidence. Neither has been.
+
+**Would reverse this.** The first measured run against the core set, which may move either number in either direction and should be expected to move at least one.
 
 ---
 

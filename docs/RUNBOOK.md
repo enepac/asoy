@@ -169,7 +169,9 @@ Anything not in this table and reproducible goes to `INCIDENTS.md` after resolut
 uv run pytest tests/test_classifier_reference.py -m reference -s
 ```
 
-It needs Ollama running with the tier's model pulled, makes one vision call per block, and is excluded from the default suite for both reasons. It prints a confusion matrix and asserts the ADR-026 bar: cross-family confusion at or below 5%, `unknown` at or below 25%. Within-family confusion is printed and uncapped for v1.
+It needs Ollama running with the tier's model pulled, makes one vision call per block, and is excluded from the default suite for both reasons. It prints a confusion matrix and asserts the ADR-026 bar: cross-family confusion at or below 5%, and wrong abstentions at or below 20% of the blocks whose expected answer is a real type.
+
+Three figures are printed and not capped. Within-family confusion, the all-abstentions rate, and the abstention rate on the deliberately-ambiguous blocks. **Read the last one as a signal rather than a score**: low means the classifier is guessing where a guess is not supported, which raises accuracy while being the behaviour ADR-026 rejects.
 
 **It skips when the core set is empty, which it is today** — the public-domain books are still being gathered. A skip here is not a pass, and until `reference/classifier/` holds the core set, every acceptance number for that component is unmeasured. Point `ASOY_REFERENCE_EXTENSION` at a local set of modern material to have it reported alongside; it never sets the bar.
 

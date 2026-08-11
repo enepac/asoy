@@ -48,8 +48,17 @@ MAX_CROSS_FAMILY_RATE = 0.05
 # and uncapped for v1. Both members of a pair get broadly similar description treatment, so the
 # cost of confusing them is real but much smaller. See ADR-026 for the reversal condition.
 
-# Above this, the model call is not earning its cost and the pre-pass should be doing more.
-MAX_UNKNOWN_RATE = 0.25
+# Wrong abstentions: blocks whose expected answer was a real type and which came back `unknown`.
+# Measured against the typed blocks only — roughly 50 of the core's 60 — not against the whole
+# set. Above this, the model call is not earning its cost and the pre-pass should be doing more.
+#
+# The earlier form of this bar counted every abstention against the whole set at 25%. That reading
+# spent about 17% of its own budget on the ten deliberately-ambiguous blocks whose correct answer
+# is `unknown`, leaving roughly 8% for actual mistakes — it penalised the behaviour it was written
+# to protect. The all-abstentions rate is still reported, as context rather than as a bar.
+#
+# 20% is a considered starting point and not a measured one, and it moves with CERTAINTY_FLOOR.
+MAX_WRONGLY_UNKNOWN_RATE = 0.20
 
 # Which types are near-substitutes for each other. Confusion inside a family is a smaller error
 # than confusion across one, and the bar treats them differently.
@@ -158,12 +167,16 @@ class Metrics:
     def unknown_rate(self) -> float:
         """Every block answered `unknown`, including the ones where that is the right answer.
 
-        This is the figure the acceptance bar names. Note that a core set holding roughly ten
-        legitimately-unknown blocks out of sixty starts at about 0.17 before a single mistake, so
-        the bar's real headroom for wrongly-unknown blocks is smaller than 0.25 suggests. See
-        `wrongly_unknown_rate` for the other reading.
+        Reported as context, and **not a bar**. A set holding ten legitimately-ambiguous blocks in
+        sixty reads about 0.17 here before a single mistake, so capping this figure would charge
+        the classifier for abstaining exactly where abstaining is correct.
         """
         return self._rate(self.predicted_unknown)
+
+    @property
+    def typed_total(self) -> int:
+        """Blocks whose expected answer is a real type. The denominator the bar is measured on."""
+        return self.total - self.expected_unknown
 
     @property
     def wrongly_unknown(self) -> int:
@@ -176,7 +189,26 @@ class Metrics:
 
     @property
     def wrongly_unknown_rate(self) -> float:
-        return self._rate(self.wrongly_unknown)
+        """The capped figure. Against typed blocks only, so ambiguous ones cannot consume it."""
+        return self.wrongly_unknown / self.typed_total if self.typed_total else 0.0
+
+    @property
+    def ambiguous_abstentions(self) -> int:
+        """Ambiguous blocks the classifier correctly declined to type."""
+        return self.expected_unknown - self.overconfident
+
+    @property
+    def ambiguous_abstention_rate(self) -> float:
+        """How often the classifier abstained where abstaining was right.
+
+        Recorded and uncapped: ten blocks cannot carry a threshold. It is read as a signal rather
+        than a score — a low number here means the classifier is guessing on blocks that do not
+        support a guess, which no other figure would reveal, since guessing right occasionally
+        raises accuracy while being exactly the behaviour ADR-026 rejects.
+        """
+        return (
+            self.ambiguous_abstentions / self.expected_unknown if self.expected_unknown else 0.0
+        )
 
     @property
     def accuracy(self) -> float:
@@ -188,7 +220,7 @@ class Metrics:
         return (
             self.total > 0
             and self.cross_family_rate <= MAX_CROSS_FAMILY_RATE
-            and self.unknown_rate <= MAX_UNKNOWN_RATE
+            and self.wrongly_unknown_rate <= MAX_WRONGLY_UNKNOWN_RATE
         )
 
     def record(self, expected: DescriptionType, predicted: DescriptionType) -> None:
@@ -216,10 +248,19 @@ class Metrics:
                 f"{self.cross_family_rate:.1%}  (bar: {MAX_CROSS_FAMILY_RATE:.0%})",
                 f"  within-family  {self.within_family:>3}  "
                 f"{self._rate(self.within_family):.1%}  (recorded, uncapped for v1)",
-                f"  unknown        {self.predicted_unknown:>3}  "
-                f"{self.unknown_rate:.1%}  (bar: {MAX_UNKNOWN_RATE:.0%}; "
+                f"  wrongly unknown{self.wrongly_unknown:>3}  "
+                f"{self.wrongly_unknown_rate:.1%}  of {self.typed_total} typed blocks  "
+                f"(bar: {MAX_WRONGLY_UNKNOWN_RATE:.0%})",
+                f"  all unknown    {self.predicted_unknown:>3}  "
+                f"{self.unknown_rate:.1%}  (context, not a bar; "
                 f"{self.expected_unknown} of these are the right answer)",
-                f"  wrongly unknown{self.wrongly_unknown:>3}  {self.wrongly_unknown_rate:.1%}",
+                f"  abstained when ambiguous  {self.ambiguous_abstentions:>3}  "
+                + (
+                    f"{self.ambiguous_abstention_rate:.1%} of {self.expected_unknown}  "
+                    "(recorded, uncapped; low means guessing)"
+                    if self.expected_unknown
+                    else "(no ambiguous blocks in this set)"
+                ),
                 f"  overconfident  {self.overconfident:>3}  "
                 "(a type given where `unknown` was expected)",
                 "",

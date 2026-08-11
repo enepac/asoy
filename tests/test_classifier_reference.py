@@ -25,7 +25,7 @@ from asoy.classifier.reference import (
     MANIFEST_NAME,
     MANIFEST_VERSION,
     MAX_CROSS_FAMILY_RATE,
-    MAX_UNKNOWN_RATE,
+    MAX_WRONGLY_UNKNOWN_RATE,
     Entry,
     Metrics,
     ReferenceError,
@@ -88,17 +88,51 @@ def test_unknown_is_not_cross_family_in_either_direction() -> None:
     assert metrics.within_family == 0
 
 
-def test_the_unknown_rate_counts_every_abstention_including_the_right_ones() -> None:
-    """The reading the acceptance bar names, stated so the arithmetic is not a surprise."""
+def test_the_capped_abstention_figure_excludes_the_ambiguous_blocks() -> None:
+    """The bar counts wrong abstentions against typed blocks, not every abstention against all.
+
+    Counting all of them would charge the classifier for abstaining where abstaining is right,
+    which is the behaviour the bar exists to protect. Here one of the four blocks is legitimately
+    ambiguous, so the denominator is three and not four.
+    """
     metrics = _metrics(
         (UNKNOWN, UNKNOWN), (PHOTOGRAPH, UNKNOWN), (CHART, CHART), (DIAGRAM, DIAGRAM)
     )
 
-    assert metrics.predicted_unknown == 2
-    assert metrics.unknown_rate == 0.5
     assert metrics.expected_unknown == 1
+    assert metrics.typed_total == 3
     assert metrics.wrongly_unknown == 1, "the abstention that actually cost something"
-    assert metrics.wrongly_unknown_rate == 0.25
+    assert metrics.wrongly_unknown_rate == pytest.approx(1 / 3)
+
+    assert metrics.predicted_unknown == 2
+    assert metrics.unknown_rate == 0.5, "reported as context, and not what the bar reads"
+
+
+def test_a_correct_abstention_never_counts_against_the_bar() -> None:
+    """Every ambiguous block answered correctly, and the capped figure stays at zero."""
+    metrics = _metrics(*[(UNKNOWN, UNKNOWN)] * 10, *[(CHART, CHART)] * 50)
+
+    assert metrics.wrongly_unknown_rate == 0.0
+    assert metrics.unknown_rate == pytest.approx(10 / 60), "the old bar would have spent 17% here"
+    assert metrics.meets_bar is True
+
+
+def test_the_ambiguous_abstention_rate_is_recorded_and_uncapped() -> None:
+    """A low number means guessing where a guess is not supported. Uncapped: ten blocks cannot
+    carry a threshold, and the figure is read as a signal rather than scored."""
+    guessing = _metrics(*[(UNKNOWN, CHART)] * 8, (UNKNOWN, UNKNOWN), (UNKNOWN, UNKNOWN))
+
+    assert guessing.ambiguous_abstentions == 2
+    assert guessing.ambiguous_abstention_rate == pytest.approx(0.2)
+    assert guessing.overconfident == 8
+    assert guessing.meets_bar is True, "uncapped means uncapped, however badly it reads"
+
+
+def test_the_ambiguous_rate_is_zero_when_the_set_has_no_ambiguous_blocks() -> None:
+    metrics = _metrics((CHART, CHART))
+    assert metrics.expected_unknown == 0
+    assert metrics.ambiguous_abstention_rate == 0.0
+    assert "no ambiguous blocks" in metrics.report("core")
 
 
 def test_overconfident_counts_a_type_given_where_unknown_was_right() -> None:
@@ -125,7 +159,7 @@ def test_the_bar_is_met_only_when_both_capped_figures_are_within_it() -> None:
     assert too_much_cross.meets_bar is False
 
     too_many_unknown = _metrics(*[(CHART, CHART)] * 14, *[(CHART, UNKNOWN)] * 6)
-    assert too_many_unknown.unknown_rate > MAX_UNKNOWN_RATE
+    assert too_many_unknown.wrongly_unknown_rate > MAX_WRONGLY_UNKNOWN_RATE
     assert too_many_unknown.meets_bar is False
 
 
@@ -144,12 +178,14 @@ def test_the_confusion_table_names_every_type_on_both_axes() -> None:
         assert kind.value in table
 
 
-def test_the_report_states_both_readings_of_the_unknown_rate() -> None:
+def test_the_report_separates_the_capped_figure_from_the_context_ones() -> None:
     report = _metrics((UNKNOWN, UNKNOWN), (PHOTOGRAPH, UNKNOWN), (CHART, CHART)).report("core")
 
-    assert "unknown" in report
     assert "wrongly unknown" in report
-    assert "the right answer" in report
+    assert "typed blocks" in report, "the denominator the bar reads"
+    assert "all unknown" in report
+    assert "not a bar" in report, "the context figure says it is not one"
+    assert "abstained when ambiguous" in report
 
 
 # --- The manifest -------------------------------------------------------------------------------
@@ -319,7 +355,7 @@ def test_the_classifier_meets_the_acceptance_bar(capsys: pytest.CaptureFixture[s
         print(f"\ntier: {tier.value}\n{metrics.report('core')}")
 
     assert metrics.cross_family_rate <= MAX_CROSS_FAMILY_RATE, metrics.confusion_table()
-    assert metrics.unknown_rate <= MAX_UNKNOWN_RATE, metrics.confusion_table()
+    assert metrics.wrongly_unknown_rate <= MAX_WRONGLY_UNKNOWN_RATE, metrics.confusion_table()
 
 
 @pytest.mark.reference
