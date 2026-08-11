@@ -4,7 +4,7 @@
 
 **Every line below was checked against the repository or a command run when it was written.** Where something could not be verified, it says so rather than being left out. Regenerated whenever a component lands, an ADR is added, or a gap opens or closes (`CLAUDE.md` §6).
 
-**Verified:** 2026-08-10
+**Verified:** 2026-08-11
 
 ---
 
@@ -13,11 +13,11 @@
 | | |
 |---|---|
 | Version | 0.1.0 (`pyproject.toml`, confirmed by `asoy --version`) |
-| Branch / commit | `main` at `6a32031`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
-| Push state | `origin/main` was at `1c88dad` when this was verified, behind the local branch above. Anything reading this repository from GitHub sees that commit, not the one in the row above. **State the sync point, never a count** — a count is wrong the moment either side moves, and this line has gone stale twice that way |
+| Branch / commit | `main` was at `c6b993f` when the lines below were verified. Regeneration fires on the three triggers in `CLAUDE.md` §6, not on every commit, so the tree can be several commits ahead of this row rather than exactly one — it was five ahead before this regeneration |
+| Push state | `origin/main` was at `c6b993f` when this was verified, level with the local branch. **State the sync point, never a count** — a count is wrong the moment either side moves, and this line has gone stale twice that way |
 | Tests | 321 passing, 2 deselected (fences 59, classifier 42, classifier-reference 39 of which 2 need Ollama, pipeline 38, environment 36, tiers 26, router 24, smoke 22, calibre 20, ocr 17 of which 1 converts a real scanned PDF) |
 | Highest ADR | ADR-029 |
-| Dependency tree | 120 packages resolved; license scan shows no GPL-family or AGPL entry |
+| Dependency tree | `uv sync` → 150 resolved, 124 installed; `uv run pip-licenses` lists 120 distributions and shows no GPL-family or AGPL entry. The three figures count different things. This row previously read "120 packages resolved", which is the license-scan count wearing the resolver's word and is not what any command reports |
 | Release | None. No installer, no signing, no users |
 
 ## What works
@@ -29,8 +29,8 @@ Each line names the command that proves it. All were run.
 | Hardware tier detection via NVML | `uv run asoy --tier` → GPU, RTX 3050, 6.00 GiB |
 | Ollama and OCR-model environment check | `uv run asoy --check` → ready, exit 0 |
 | Scanned PDF → `.md` + `.txt`, OCR reading the page | `uv run pytest tests/test_ocr.py` |
-| EPUB → `.md` + `.txt`, pictures and tables included | `uv run asoy convert book.epub -o out` |
-| ODT → same, no Calibre involved | `uv run asoy convert book.odt -o out` |
+| EPUB → `.md` + `.txt`, pictures and tables included | `uv run asoy convert book.epub -o out` → `Chapters: 2`, both files written. No book ships in the repository; this was run against one built by `tests/epub_fixtures.py` |
+| ODT → same, no Calibre involved | `uv run asoy convert book.odt -o out`, same fixture builder, same result |
 | The delimiter: emit, parse, and the round trip | `uv run pytest tests/test_fences.py` |
 | Tables rendered from their cells, pictures marked as placeholders | `uv run pytest tests/test_pipeline.py` |
 | DRM and encryption refused at ingestion | `uv run pytest tests/test_router.py` |
@@ -63,7 +63,7 @@ Each line names the command that proves it. All were run.
 - **GPU-tier conversion speed is not what `ARCHITECTURE` §5 implies** (ADR-021). The tier delivers better descriptions but not faster conversion; the layout pass and OCR both run on CPU. Unmeasured, and no benchmark exists because no full conversion has been timed.
 - **The parser depends on a private Docling attribute** to close the source file (ADR-024). A Docling upgrade breaks it silently by design; two named tests are the only guard.
 - **Every picture in every book currently converts to a placeholder.** The output is honest and it is not useful yet. This is the single largest gap between what Asoy does and what it is for.
-- **The classifier's accuracy is unmeasured.** `reference/classifier/` is empty — the public-domain books are being gathered — so no acceptance number in ADR-026, ADR-027, or ADR-028 has been measured against anything. The harness runs and the acceptance test skips loudly rather than passing on no evidence.
+- **The classifier's accuracy is unmeasured.** `reference/classifier/` holds only its README and a manifest whose `entries` list is empty — the public-domain books are being gathered — so no acceptance number in ADR-026, ADR-027, or ADR-028 has been measured against anything. The harness runs and the acceptance test skips loudly rather than passing on no evidence.
 - **The classification prompt is unratified.** It is isolated in `src/asoy/classifier/prompt.py` and marked, and `CLAUDE.md` §5 treats prompts as ask-first. It has never been compared against an alternative.
 - **`CERTAINTY_FLOOR` is a placeholder, not a considered value.** It moves the measured `unknown` rate almost directly and should be set from the reference set once that exists.
 - **One input cannot be represented**: author text containing a line that is exactly `<!-- /asoy:text -->`. It raises and writes nothing rather than emitting a file that misparses itself (ADR-025). Requires a book to contain Asoy's own closing marker verbatim.
