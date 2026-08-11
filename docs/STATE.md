@@ -13,8 +13,8 @@
 | | |
 |---|---|
 | Version | 0.1.0 (`pyproject.toml`, confirmed by `asoy --version`) |
-| Branch / commit | `main` at `45b65e8`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
-| Push state | In sync with `origin/main` at `45b65e8`, and one ahead of it until the commit carrying this line is itself pushed |
+| Branch / commit | `main` at `fd81f3e`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
+| Push state | In sync with `origin/main` at `fd81f3e`, and one ahead of it until the commit carrying this line is itself pushed |
 | Tests | 149 passing (calibre 20, environment 36, pipeline 22, router 24, smoke 21, tiers 26) |
 | Highest ADR | ADR-024 |
 | Dependency tree | 117 packages resolved; license scan shows no GPL-family or AGPL entry |
@@ -56,8 +56,7 @@ Each line names the command that proves it. All were run.
 - **The parser depends on a private Docling attribute** to close the source file (ADR-024). A Docling upgrade breaks it silently by design; two named tests are the only guard.
 - **Author text is emitted with no Markdown escaping at all** (ADR-022). A paragraph legitimately beginning with `#` or `>` will be read as structure. Unsettled, and tied to the delimiter work.
 - **Runs of whitespace collapse in EPUB and HTML** (`ARCHITECTURE` §11). Decided and documented, not a defect, listed here so it is not rediscovered.
-- **`src/asoy/ocr/__init__.py` names Tesseract and PaddleOCR**, which ADR-019 removed in favour of RapidOCR. A stale docstring on an unimplemented stub, harmless today and wrong.
-- **Four commits are unpushed.** Anything reading the repository from GitHub — including the planning surface — is four commits behind this file.
+- **Anything reading this repository from GitHub sees the default branch as pushed, not as it stands locally.** The position table above says where that is. Uncommitted work and unpushed commits are invisible to it.
 
 ## The next move
 
