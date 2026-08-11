@@ -14,7 +14,7 @@ Three markers, all valid CommonMark HTML comments and therefore invisible when r
 
     <!-- asoy:document version="1" tier="gpu" model="qwen3-vl:4b" -->
 
-    <!-- asoy:description type="chart" confidence="0.82" status="ok" -->
+    <!-- asoy:description type="chart" confidence="0.82" status="ok" source="model" -->
     Description prose here.
     <!-- /asoy:description -->
 
@@ -70,6 +70,23 @@ class DescriptionStatus(StrEnum):
     FAILED = "failed"
 
 
+class DescriptionSource(StrEnum):
+    """Which path produced this description, which is what makes `confidence` comparable.
+
+    A table rendered from its extracted cells and a chart described by a vision model can both
+    carry a high confidence, and the number means different things: one had nothing to be
+    uncertain about, the other was a heuristic that happened to score well. Without this
+    attribute a consumer sorting by confidence mixes the two.
+
+    It names the route, not who typed the characters. A `failed` description is `model`, because
+    the model path is the one that was responsible and did not deliver — `status` says what
+    happened, `source` says where it was meant to come from.
+    """
+
+    STRUCTURE = "structure"
+    MODEL = "model"
+
+
 class FenceError(ValueError):
     """The document could not be emitted or parsed as a well-formed fenced document."""
 
@@ -114,6 +131,7 @@ class DescriptionSegment:
     type: DescriptionType
     confidence: float
     status: DescriptionStatus
+    source: DescriptionSource
     body: str
 
 
@@ -161,7 +179,7 @@ def document_header(header: DocumentHeader) -> str:
 
 
 def description_fence(segment: DescriptionSegment) -> str:
-    """One description, opened and closed. All three attributes, always, in this order."""
+    """One description, opened and closed. All four attributes, always, in this order."""
     if not segment.body.strip():
         raise FenceError(
             "A description fence must carry readable text. Invariant 7: a gap where a "
@@ -171,7 +189,8 @@ def description_fence(segment: DescriptionSegment) -> str:
     open_marker = (
         f'<!-- {DESCRIPTION} type="{segment.type.value}" '
         f'confidence="{format_confidence(segment.confidence)}" '
-        f'status="{segment.status.value}" -->'
+        f'status="{segment.status.value}" '
+        f'source="{segment.source.value}" -->'
     )
     return f"{open_marker}\n{segment.body.strip()}\n<!-- /{DESCRIPTION} -->"
 
@@ -270,7 +289,7 @@ _HEADER_LINE = re.compile(
 
 _DESCRIPTION_OPEN = re.compile(
     rf'^<!--\s*{re.escape(DESCRIPTION)}\s+type="([^"]*)"\s+'
-    r'confidence="([^"]*)"\s+status="([^"]*)"\s*-->$'
+    r'confidence="([^"]*)"\s+status="([^"]*)"\s+source="([^"]*)"\s*-->$'
 )
 
 _DESCRIPTION_CLOSE = re.compile(rf"^<!--\s*/{re.escape(DESCRIPTION)}\s*-->$")
@@ -364,7 +383,9 @@ def _read_until(
     raise FenceError(f"A {name} fence was opened at line {start} and never closed.")
 
 
-def _description(kind: str, confidence: str, status: str, body: str) -> DescriptionSegment:
+def _description(
+    kind: str, confidence: str, status: str, source: str, body: str
+) -> DescriptionSegment:
     """Build a description segment, rejecting anything outside the closed sets."""
     try:
         parsed_type = DescriptionType(kind)
@@ -379,6 +400,11 @@ def _description(kind: str, confidence: str, status: str, body: str) -> Descript
     except ValueError:
         raise FenceError(f"{status!r} is not a description status.") from None
 
+    try:
+        parsed_source = DescriptionSource(source)
+    except ValueError:
+        raise FenceError(f"{source!r} is not a description source.") from None
+
     if not re.fullmatch(r"[01]\.\d{2}", confidence):
         raise FenceError(f"Confidence must be two decimals from 0.00 to 1.00, got {confidence!r}.")
 
@@ -386,6 +412,7 @@ def _description(kind: str, confidence: str, status: str, body: str) -> Descript
         type=parsed_type,
         confidence=float(confidence),
         status=parsed_status,
+        source=parsed_source,
         body=body.strip("\n"),
     )
 

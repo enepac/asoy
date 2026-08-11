@@ -13,9 +13,9 @@
 | | |
 |---|---|
 | Version | 0.1.0 (`pyproject.toml`, confirmed by `asoy --version`) |
-| Branch / commit | `main` at `af7ec58`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
-| Push state | In sync with `origin/main` at `af7ec58`, and one ahead of it until the commit carrying this line is itself pushed. **State the sync point, never a count** — a count is wrong the moment either side moves, and this line has gone stale twice that way |
-| Tests | 218 passing (fences 54, environment 36, pipeline 36, tiers 26, router 24, smoke 22, calibre 20) |
+| Branch / commit | `main` at `f7c1fa3`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
+| Push state | In sync with `origin/main` at `f7c1fa3`, and one ahead of it until the commit carrying this line is itself pushed. **State the sync point, never a count** — a count is wrong the moment either side moves, and this line has gone stale twice that way |
+| Tests | 221 passing (fences 57, environment 36, pipeline 36, tiers 26, router 24, smoke 22, calibre 20) |
 | Highest ADR | ADR-025 |
 | Dependency tree | 117 packages resolved; license scan shows no GPL-family or AGPL entry |
 | Release | None. No installer, no signing, no users |
@@ -58,7 +58,7 @@ Each line names the command that proves it. All were run.
 - **The parser depends on a private Docling attribute** to close the source file (ADR-024). A Docling upgrade breaks it silently by design; two named tests are the only guard.
 - **Every picture in every book currently converts to a placeholder.** The output is honest and it is not useful yet. This is the single largest gap between what Asoy does and what it is for.
 - **One input cannot be represented**: author text containing a line that is exactly `<!-- /asoy:text -->`. It raises and writes nothing rather than emitting a file that misparses itself (ADR-025). Requires a book to contain Asoy's own closing marker verbatim.
-- **The table renderer has been read, not listened to.** Its prose form was chosen for the ear and has never been through a text-to-speech engine.
+- **The table narration form has been read, not heard.** A table becomes `A table of 2 columns and 2 rows. The columns are: Name, Year.` then `Row 1. Name, Ada. Year, 1843.` It was chosen for the ear and has never been through a text-to-speech engine. **Needs a listening pass before 1.0**, on a real table of more than three columns, where naming every column on every row may prove tiring rather than clarifying.
 - **Runs of whitespace collapse in EPUB and HTML** (`ARCHITECTURE` §11). Decided and documented, not a defect, listed here so it is not rediscovered.
 - **Anything reading this repository from GitHub sees the default branch as pushed, not as it stands locally.** The position table above says where that is. Uncommitted work and unpushed commits are invisible to it.
 

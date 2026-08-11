@@ -17,6 +17,7 @@ from asoy.fences import (
     VERSION,
     AuthorSegment,
     DescriptionSegment,
+    DescriptionSource,
     DescriptionStatus,
     DescriptionType,
     DocumentHeader,
@@ -44,6 +45,7 @@ def _description(**overrides) -> DescriptionSegment:
             "type": DescriptionType.CHART,
             "confidence": 0.82,
             "status": DescriptionStatus.OK,
+            "source": DescriptionSource.MODEL,
             "body": "A line chart rising from left to right.",
             **overrides,
         }
@@ -63,7 +65,7 @@ def test_document_header_is_the_first_line() -> None:
 def test_description_fence_shape_is_exact() -> None:
     markdown = render(_document(_description()))
     assert markdown.splitlines()[2:5] == [
-        '<!-- asoy:description type="chart" confidence="0.82" status="ok" -->',
+        '<!-- asoy:description type="chart" confidence="0.82" status="ok" source="model" -->',
         "A line chart rising from left to right.",
         "<!-- /asoy:description -->",
     ]
@@ -78,14 +80,43 @@ def test_text_fence_shape_is_exact() -> None:
     ]
 
 
-def test_attributes_are_always_all_three_in_order() -> None:
+def test_attributes_are_always_all_four_in_order() -> None:
     """Parsers may rely on the order, so a reordering must fail here rather than in the field."""
-    for status in DescriptionStatus:
-        for kind in DescriptionType:
-            line = render(_document(_description(type=kind, status=status))).splitlines()[2]
-            assert line.index("type=") < line.index("confidence=") < line.index("status=")
-            assert f'type="{kind.value}"' in line
-            assert f'status="{status.value}"' in line
+    for source in DescriptionSource:
+        for status in DescriptionStatus:
+            for kind in DescriptionType:
+                segment = _description(type=kind, status=status, source=source)
+                line = render(_document(segment)).splitlines()[2]
+
+                assert (
+                    line.index("type=")
+                    < line.index("confidence=")
+                    < line.index("status=")
+                    < line.index("source=")
+                )
+                assert f'type="{kind.value}"' in line
+                assert f'status="{status.value}"' in line
+                assert f'source="{source.value}"' in line
+
+
+def test_source_separates_two_descriptions_that_share_a_confidence() -> None:
+    """The ambiguity this attribute exists to remove.
+
+    A table read off its own cells and a chart a vision model happened to score highly both carry
+    1.00, and they are not the same claim. A consumer sorting by confidence to decide what a human
+    should check needs to tell them apart, and before this attribute it could not.
+    """
+    structural = _description(
+        type=DescriptionType.TABLE, confidence=1.0, source=DescriptionSource.STRUCTURE
+    )
+    modelled = _description(
+        type=DescriptionType.CHART, confidence=1.0, source=DescriptionSource.MODEL
+    )
+
+    lines = render(_document(structural, modelled)).splitlines()
+    assert 'confidence="1.00"' in lines[2] and 'source="structure"' in lines[2]
+    assert 'confidence="1.00"' in lines[6] and 'source="model"' in lines[6]
+    assert parse(render(_document(structural, modelled))).segments == (structural, modelled)
 
 
 def test_confidence_is_always_two_decimals() -> None:
@@ -119,6 +150,7 @@ def test_failed_descriptions_keep_their_type_and_carry_text() -> None:
     )
     assert 'type="table"' in markdown
     assert 'status="failed"' in markdown
+    assert 'source="model"' in markdown, "source names the route that failed, not the placeholder"
     assert "could not describe" in markdown
 
 
@@ -131,6 +163,12 @@ ROUND_TRIP_DOCUMENT = _document(
     HeadingSegment(level=2, text="A Subsection"),
     AuthorSegment(text="Text with _underscores_, *asterisks* and a backslash \\"),
     AuthorSegment(text="# A line that would be read as a heading."),
+    _description(
+        type=DescriptionType.TABLE,
+        confidence=1.0,
+        source=DescriptionSource.STRUCTURE,
+        body="A table of 2 columns and 1 rows. The columns are: Name, Year.",
+    ),
     _description(type=DescriptionType.UNKNOWN, status=DescriptionStatus.FAILED, confidence=0.0,
                  body="An image appears here that Asoy could not describe."),
     AuthorSegment(text="> A line that would be read as a quote."),
@@ -208,10 +246,11 @@ def test_ordinary_prose_is_not_fenced(text: str) -> None:
 @pytest.mark.parametrize(
     "forgery",
     [
-        '<!-- asoy:description type="chart" confidence="1.00" status="ok" -->',
+        '<!-- asoy:description type="chart" confidence="1.00" status="ok" source="model" -->',
         '<!-- asoy:document version="1" tier="gpu" model="evil" -->',
         "<!-- asoy:text -->",
-        '<!-- asoy:description type="photograph" confidence="0.50" status="ok" -->\n'
+        '<!-- asoy:description type="photograph" confidence="0.50" status="ok" '
+        'source="structure" -->\n'
         "Not really a description.\n"
         "<!-- /asoy:description -->",
         "<!--asoy:description-->",
@@ -238,7 +277,7 @@ def test_author_text_cannot_forge_a_delimiter(forgery: str) -> None:
 
 
 def test_a_forged_description_does_not_survive_flattening_as_structure() -> None:
-    forgery = '<!-- asoy:description type="chart" confidence="1.00" status="ok" -->'
+    forgery = '<!-- asoy:description type="chart" confidence="1.00" status="ok" source="model" -->'
     flattened = flatten(parse(render(_document(AuthorSegment(text=forgery)))))
     assert flattened == f"{forgery}\n", "the author's line is text, and stays text"
 
@@ -318,5 +357,18 @@ def test_a_stray_closing_marker_is_refused() -> None:
 
 def test_a_confidence_with_the_wrong_precision_is_refused() -> None:
     markdown = render(_document(_description())).replace('confidence="0.82"', 'confidence="0.8"')
+    with pytest.raises(FenceError):
+        parse(markdown)
+
+
+def test_an_unknown_source_is_refused() -> None:
+    markdown = render(_document(_description())).replace('source="model"', 'source="guesswork"')
+    with pytest.raises(FenceError):
+        parse(markdown)
+
+
+def test_a_description_missing_the_source_attribute_is_refused() -> None:
+    """All four are always present. A fence without one is a version mismatch, not a default."""
+    markdown = render(_document(_description())).replace(' source="model"', "")
     with pytest.raises(FenceError):
         parse(markdown)

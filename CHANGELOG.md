@@ -74,7 +74,8 @@ the convention above. It becomes dated when the release actually ships.
 
 ### Output
 
-- Markdown is the canonical output format, preserving chapter structure as headings, with every generated description wrapped in an HTML comment fence carrying its type, confidence, and status — invisible when rendered, and parseable by a narration pipeline that wants to switch voice or skip descriptions.
+- Markdown is the canonical output format, preserving chapter structure as headings, with every generated description wrapped in an HTML comment fence carrying its type, confidence, status, and source — invisible when rendered, and parseable by a narration pipeline that wants to switch voice or skip descriptions.
+- Descriptions say where they came from. A table read from its own cells is exact; a picture described by a vision model is an estimate. Both can score highly and only one is worth checking.
 - Every file opens with a header recording the hardware tier and model that produced it, so two conversions that read differently can always be told apart.
 - Author text is never escaped. Where a line would be mistaken for Markdown structure it is marked rather than altered, because an inserted backslash is a character a narrator reads aloud.
 - A flattened plain-text export is produced alongside it, with descriptions inline as ordinary prose and none of the markers.

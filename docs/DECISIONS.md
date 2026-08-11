@@ -517,7 +517,7 @@ Author text needing disambiguation:
 <!-- /asoy:text -->
 ```
 
-`type` is one of `photograph`, `illustration`, `table`, `diagram`, `chart`, `unknown` — a closed set for v1, to which adding a member is a MINOR release. `confidence` is 0.00 to 1.00 at two decimals. `status` is `ok` or `failed`. All three are always present, always in that order, and a parser may rely on it.
+`type` is one of `photograph`, `illustration`, `table`, `diagram`, `chart`, `unknown` — a closed set for v1, to which adding a member is a MINOR release. `confidence` is 0.00 to 1.00 at two decimals. `status` is `ok` or `failed`. All three are always present, always in that order, and a parser may rely on it. *(A fourth attribute was added the same day — see the amendment at the end of this entry.)*
 
 **Why this shape.** Four properties, and it is the only candidate that has all four.
 
@@ -546,6 +546,29 @@ The header carries `tier` and `model` on every job, which makes invariant 8 a pr
 The `.md` and `.txt` are both rendered from one document object, and the module that emits the format also parses it. A round-trip test is therefore the primary guard: emit, parse, and require the result identical.
 
 **Would reverse this.** Nothing about the shape, short of a major version. Attribute additions are expected and are the mechanism this format was chosen for. If a fourth marker is ever needed, it takes the same `<!-- asoy:name -->` form, and the fencing rule already treats any `<!-- asoy:` line in author text as needing a fence, so text emitted today cannot forge a marker invented tomorrow.
+
+### Amendment, 2026-08-10 — the `source` attribute
+
+*The text above is left as written. This is an addition to it, made the same day, and the original wording is kept because the gap it left is the useful part.*
+
+**A fourth attribute, `source`, valued `structure` or `model`.** Attribute order becomes `type`, `confidence`, `status`, `source`, all four always present.
+
+```
+<!-- asoy:description type="chart" confidence="0.82" status="ok" source="model" -->
+```
+
+**Why.** The decision above rendered a cleanly extracted table from its cells at `confidence="1.00"`, on the reasoning that nothing about it was uncertain. That is sound and it made 1.00 mean two different things: a table read straight off its own structure, and a vision model that happened to score well. A consumer sorting by confidence to decide what a human should review would have mixed them, and the ordering would have been silently wrong rather than visibly wrong.
+
+`source` says which path produced the description, which is what makes `confidence` comparable at all. It **names the route, not who typed the characters**: a `failed` description carries `source="model"`, because the model path is the one that was responsible and did not deliver. `status` says what happened; `source` says where it was meant to come from. Together they let a consumer decide whether re-running the block could help.
+
+This is additive, so it is MINOR-compatible under ADR-006, and it costs nothing today because no consumer exists. That is precisely why it is worth doing now: the same fix after someone has integrated is a coordination problem rather than an edit.
+
+**On the header's `version`.** It stays at `1`. It tracks breaking changes to the format, not additive ones — a parser written against the three-attribute form would fail on the fourth, but no such parser exists, and bumping the version for every addition would make it a change counter rather than a compatibility signal.
+
+**Rejected.**
+- *Give structural tables a lower confidence to keep the number's meaning uniform* — would encode a doubt that does not exist, and make the review UI surface correct tables for checking.
+- *A third value for placeholders, `source="placeholder"`* — `status="failed"` already carries that, and a value that duplicates another attribute invites the two to disagree.
+- *Leave it and document the ambiguity in `SUPPORT.md`* — a documented trap is still a trap, and this one is free to remove today.
 
 ---
 

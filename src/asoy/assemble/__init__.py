@@ -20,6 +20,7 @@ from asoy.fences import (
     CHAPTER_HEADING_LEVEL,
     AuthorSegment,
     DescriptionSegment,
+    DescriptionSource,
     DescriptionStatus,
     DescriptionType,
     DocumentHeader,
@@ -45,8 +46,8 @@ PLACEHOLDER = {
 }
 
 # A structurally rendered table involved no model and no heuristic, so there is nothing to be
-# uncertain about: the cells are the cells. Confidence records that, rather than inventing a
-# number to look consistent with descriptions that were guessed at.
+# uncertain about: the cells are the cells. The fence carries source="structure" alongside it, so
+# this 1.00 is never mistaken for a vision model that happened to score well.
 STRUCTURAL_CONFIDENCE = 1.00
 
 # No description has been generated, so nothing has been judged. Not a low score — an absent one.
@@ -96,13 +97,18 @@ def _description_for(non_text: NonText) -> DescriptionSegment:
             type=DescriptionType.TABLE,
             confidence=STRUCTURAL_CONFIDENCE,
             status=DescriptionStatus.OK,
+            source=DescriptionSource.STRUCTURE,
             body=render_table(non_text.table),
         )
 
+    # `source` names the route, not who wrote the characters. This placeholder is Asoy's own text,
+    # but the model path is the one that was meant to fill it and did not, which is what a
+    # consumer needs to know when it decides whether to re-run the block.
     return DescriptionSegment(
         type=non_text.type,
         confidence=FAILED_CONFIDENCE,
         status=DescriptionStatus.FAILED,
+        source=DescriptionSource.MODEL,
         body=PLACEHOLDER[non_text.type],
     )
 

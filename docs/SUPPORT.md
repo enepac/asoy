@@ -114,7 +114,7 @@ Two files per book. A `.md`, which is the real one, and a `.txt` derived from it
 In the `.md`, every description of a picture, table, chart, or diagram is wrapped in a marker:
 
 ```
-<!-- asoy:description type="chart" confidence="0.82" status="ok" -->
+<!-- asoy:description type="chart" confidence="0.82" status="ok" source="model" -->
 A line chart rising steadily from left to right.
 <!-- /asoy:description -->
 ```
@@ -122,6 +122,8 @@ A line chart rising steadily from left to right.
 These are HTML comments, so they are invisible if you open the file in anything that renders Markdown — the book reads as a book. They are there so a narration pipeline can read descriptions in a second voice, pause before them, or skip them entirely. If you are building one, that marker's shape is a promise: it will not change without a major version.
 
 `confidence` is a rough internal score for sorting which descriptions are worth checking. **It is not a probability.** `0.80` does not mean right eight times in ten.
+
+`source` says where the description came from. `structure` means Asoy read it directly — a table taken from its own cells, which is exact. `model` means a vision model described a picture, which is an estimate. Read it together with `confidence`: a table at `1.00` is certain, a chart at `1.00` is a model that scored well, and only the second is worth your time to check.
 
 `status="failed"` means Asoy could not describe that element and has left a spoken placeholder in its place, so you hear that something was there rather than hearing nothing.
 

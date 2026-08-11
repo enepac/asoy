@@ -156,7 +156,7 @@ The delimiter is an HTML comment fence (ADR-025). Three markers exist:
 ```
 <!-- asoy:document version="1" tier="gpu" model="qwen3-vl:4b" -->
 
-<!-- asoy:description type="chart" confidence="0.82" status="ok" -->
+<!-- asoy:description type="chart" confidence="0.82" status="ok" source="model" -->
 Description prose here.
 <!-- /asoy:description -->
 
@@ -167,9 +167,11 @@ Description prose here.
 
 The header is the first line of every `.md` and records the tier and model the job ran under, which is what makes invariant 8 a property of the file rather than only of the interface.
 
-`type` is one of `photograph`, `illustration`, `table`, `diagram`, `chart`, `unknown`. The set is closed for v1; adding a member is a MINOR release. `status` is `ok` or `failed`, and a failed description keeps its type and carries readable placeholder text rather than being omitted. All three attributes are always present, always in that order, and a parser may rely on it.
+`type` is one of `photograph`, `illustration`, `table`, `diagram`, `chart`, `unknown`. The set is closed for v1; adding a member is a MINOR release. `status` is `ok` or `failed`, and a failed description keeps its type and carries readable placeholder text rather than being omitted. `source` is `structure` or `model`. All four attributes are always present, always in that order, and a parser may rely on it.
 
 **`confidence` is an uncalibrated heuristic, not a probability.** It is derived from the model's response and the block's classification certainty, and its purpose is to order descriptions by how much they are worth reviewing. It has never been calibrated against ground truth: `0.80` does not mean eight times in ten.
+
+**`source` is what makes `confidence` comparable.** A table rendered from its own cells (section 4.6) carries `1.00` because nothing about it was uncertain; a chart the vision model scored highly carries a number that came from a heuristic. Both are `1.00` and they are not the same claim, so a consumer ordering descriptions by how much they need a human must read the two attributes together. It names the route rather than who wrote the characters: a `failed` description is `source="model"`, because the model path was responsible and did not deliver.
 
 **Author text is never escaped.** A backslash inserted to tame a Markdown metacharacter is a character a naive engine reads aloud. Where a block would otherwise be read as structure — a line beginning with `#`, `>`, a list marker, a pipe — it is wrapped in `asoy:text` instead. The fence appears only where it is needed. The only characters Asoy adds to an emitted file are the markers and the `#` of a heading.
 

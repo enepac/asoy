@@ -206,7 +206,7 @@ def test_assembler_adds_nothing_to_author_text() -> None:
         "> A paragraph that begins with a quote marker.",
         "- A paragraph that begins with a dash.",
         "| A paragraph that begins with a pipe.",
-        '<!-- asoy:description type="chart" confidence="1.00" status="ok" -->',
+        '<!-- asoy:description type="chart" confidence="1.00" status="ok" source="model" -->',
     ],
 )
 def test_author_text_is_fenced_rather_than_escaped(awkward: str) -> None:
@@ -244,6 +244,7 @@ def test_a_picture_becomes_a_marked_placeholder_not_silence() -> None:
     assert 'type="unknown"' in rendered.markdown
     assert 'status="failed"' in rendered.markdown
     assert 'confidence="0.00"' in rendered.markdown
+    assert 'source="model"' in rendered.markdown, "the route that was meant to fill it"
     assert "could not describe" in rendered.markdown
     assert "could not describe" in rendered.plain_text, "the listener hears the gap too"
     assert rendered.failed_description_count == 1
@@ -276,6 +277,9 @@ def test_a_cleanly_extracted_table_renders_from_its_structure() -> None:
     assert 'type="table"' in rendered.markdown
     assert 'status="ok"' in rendered.markdown
     assert 'confidence="1.00"' in rendered.markdown
+    # The pair is the point: 1.00 from the cells is not the same claim as 1.00 from a model, and
+    # a consumer sorting by confidence needs to tell them apart.
+    assert 'source="structure"' in rendered.markdown
     assert "Ada" in rendered.plain_text and "1843" in rendered.plain_text
     assert "|" not in rendered.plain_text, "a pipe table would be read aloud as pipes"
     assert rendered.failed_description_count == 0
@@ -457,6 +461,7 @@ def test_a_document_with_a_picture_and_a_table_converts(tmp_path: Path) -> None:
 
     assert 'type="unknown"' in markdown and 'status="failed"' in markdown
     assert 'type="table"' in markdown and 'status="ok"' in markdown
+    assert 'source="structure"' in markdown and 'source="model"' in markdown
     assert "Ada" in markdown and "1843" in markdown
 
     assert "Before the picture." in flattened
