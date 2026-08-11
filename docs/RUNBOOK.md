@@ -163,6 +163,16 @@ Anything not in this table and reproducible goes to `INCIDENTS.md` after resolut
 
 **Model updates specifically.** Never change the model a shipped version depends on without testing description quality on a fixed reference set — the same book, the same charts, compared side by side. Without a reference set this check is a vibe, and description quality is the product.
 
+**The classifier reference set.** The block classifier is measured, not inspected. Run it after any change to the classifier, its prompt, its certainty constants, or either tier's model:
+
+```
+uv run pytest tests/test_classifier_reference.py -m reference -s
+```
+
+It needs Ollama running with the tier's model pulled, makes one vision call per block, and is excluded from the default suite for both reasons. It prints a confusion matrix and asserts the ADR-026 bar: cross-family confusion at or below 5%, `unknown` at or below 25%. Within-family confusion is printed and uncapped for v1.
+
+**It skips when the core set is empty, which it is today** — the public-domain books are still being gathered. A skip here is not a pass, and until `reference/classifier/` holds the core set, every acceptance number for that component is unmeasured. Point `ASOY_REFERENCE_EXTENSION` at a local set of modern material to have it reported alongside; it never sets the bar.
+
 **On each Docling update.** Run the full test suite before accepting it, and read `test_parse_does_not_hold_the_file_open` and `test_the_intermediate_epub_does_not_outlive_the_job` if either fails. The parser reaches into a private Docling attribute to close the source file, because nothing public does (ADR-024). A rename upstream is silent by design — the call is guarded — so those two tests are the only thing standing between an upgrade and leaked file handles.
 
 ## 10. What is not an incident

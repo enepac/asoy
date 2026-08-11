@@ -588,4 +588,50 @@ This is additive, so it is MINOR-compatible under ADR-006, and it costs nothing 
 
 ---
 
+## ADR-026 - The block classifier types pictures with a caption pre-pass and the tier's own model
+
+**Date:** 2026-08-10 · **Status:** Accepted
+
+**Decision.** Four decisions, taken together because each depends on the others.
+
+1. **Mechanism.** A cheap caption and context pre-pass first, then a classification call to the tier's existing vision model for anything the pre-pass cannot settle. Qwen3-VL-4B on the GPU tier, Moondream 2 on the CPU tier.
+2. **No new dependency and no new model.** Nothing enters the manifest or the installer.
+3. **`unknown` is retained below a confidence floor**, and is never replaced by a guess.
+4. **Type and description are not folded into one model call.**
+
+**Why the pre-pass first.** Books usually say what their pictures are. A caption reading "Figure 12. Photograph of the north face" has already answered the question, and spending seconds of a vision model's time to recover an answer sitting in the text is waste that scales with the length of the book. The pre-pass settles or abstains and never guesses: a caption naming terms from two families, or none, sends the block on. A weak guess there would be worse than no answer, because it would be spent *instead of* the model call rather than alongside it.
+
+Only the caption is read. Surrounding prose mentioning a chart three sentences away is not a statement about this block. That prose is still collected and passed to the model, which can weigh it against the image — useful as evidence, useless as a rule.
+
+**Why no new model.** A small dedicated ONNX image classifier would be more accurate at this specific task and would run in milliseconds. It was rejected on installer size: ADR-020 already accepts roughly 470 MB of PyTorch as unavoidable and records that the installer is large enough to be a stated expectation in `SUPPORT.md` rather than a defect. Adding weights for a component that has a serviceable free alternative — a vision model the user has already pulled for the description generator — spends that budget before there is any measurement saying it needs spending. The reversal condition is a benchmark, not an argument.
+
+**Why `unknown` is kept.** The type selects the description prompt. A wrong type produces confident prose about the wrong kind of thing: a chart prompt applied to a photograph describes axes that do not exist, which is a worse listening experience than the generic handling an honest `unknown` already receives. This is the decision most likely to be "improved" by a later session, because discarding low-certainty answers lowers every accuracy figure on the reference set while raising the product's quality. It is guarded by a test that says so.
+
+**Why type and description stay separate calls.** Folding them looks like an obvious saving — one call instead of two, and the model is looking at the image either way. It inverts ARCHITECTURE 4.6. The type exists *to select the prompt*; a combined call has to be given a single generic prompt, which is precisely the arrangement 4.6 rejects as noticeably worse. The saving is real and it buys the thing the component was built to avoid.
+
+**Certainty, and where it goes.** Every classification carries a certainty on 0.00 to 1.00, the same scale as the description fence's `confidence` attribute (ARCHITECTURE 4.8, ADR-025), because that is its destination — the fence's confidence will combine the description's own signal with this one, and two scales would have to be reconciled by whoever writes that code.
+
+It is derived from named evidence rather than from a model's opinion of itself. A caption that says "photograph" is a fact about the book and scores 0.90. A model's self-reported certainty is not calibrated against anything, so it is clamped below what a caption earns before use. Every result also records which evidence it rested on and the term or answer that decided it, so a wrong type names its own cause instead of requiring the block to be found and re-examined.
+
+**The acceptance bar**, measured on the committed core set only:
+
+- Cross-family confusion at or below 5%. Cross-family means a photograph or illustration called a diagram or chart, or the reverse — the failure that selects a wholly wrong description approach.
+- Within-family confusion (photograph against illustration, diagram against chart) recorded in a confusion matrix, uncapped for v1. Both members of a pair receive broadly similar description treatment, so the cost is real and much smaller.
+- `unknown` at or below 25%. Above that the model call is not earning its cost and the pre-pass should be doing more.
+
+**Rejected.**
+- *A dedicated ONNX image classifier* — better at the task, and it adds weights to an installer whose size is already a documented expectation. Revisit with a benchmark.
+- *One model call producing type and description together* — cheaper, and it inverts the dependency 4.6 is built on.
+- *Taking the model's best guess below the floor* — raises measured accuracy, lowers delivered quality.
+- *Reading the surrounding prose as decisively as the caption* — a chart mentioned nearby is not a claim about this block, and treating it as one would make the pre-pass confidently wrong on exactly the books that discuss their figures most.
+- *Passing the pre-pass's conclusion to the model as a hint* — would bias the answer and make any future agreement between the two an echo rather than evidence.
+
+**Consequences.** Classification costs one vision call per picture the caption does not settle, on the same model the description generator will use, so a book's conversion time roughly doubles per undescribed picture before descriptions are even generated. This is the price of decision 2 and is the first thing a benchmark should measure.
+
+**The numbers above are unmeasured.** The committed core set does not exist yet — the books are being gathered — so nothing here has been measured against anything. The harness, the manifest format, and the bar are in place; the instrument is not. Until it lands, no claim about this component's accuracy is evidence.
+
+**Would reverse this.** On the mechanism: a measured conversion showing the per-picture model call dominates conversion time, which would make the dedicated classifier's installer cost worth paying. On the acceptance bar: a measured conversion showing within-family confusion costs more than assumed — that a photograph described by an illustration prompt is materially worse to listen to — which would cap it rather than leave it uncapped. On the floor: the measured `unknown` rate against the core set, which is what that number should be set from and currently is not.
+
+---
+
 *Companion documents: `ARCHITECTURE.md` (what the system is), `RUNBOOK.md` (how to operate it), `SUPPORT.md` (what users are told), `DATA.md` (what is held).*

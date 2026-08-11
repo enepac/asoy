@@ -135,7 +135,20 @@ Pages that produce OCR output below the confidence floor are flagged in the job 
 
 Takes the non-text blocks Docling identified and assigns each a type — photograph, illustration, table, diagram, chart — because the type determines the description prompt. A table is described as structured data read aloud; a chart is described by what it shows; a photograph is described by what is depicted. Using one generic prompt for all of them produces noticeably worse output.
 
-Tables that Docling extracts cleanly bypass the vision model entirely and are rendered from their structure, which is both faster and more accurate than describing a picture of a table.
+Tables that Docling extracts cleanly bypass the vision model entirely and are rendered from their structure, which is both faster and more accurate than describing a picture of a table. They are typed by the parser and never reach the classifier, which sees pictures only.
+
+Pictures are typed in two stages, cheapest first (ADR-026):
+
+1. **A caption pre-pass.** Books usually say what their pictures are, and reading "Figure 12. Photograph of the north face" costs nothing next to a model call. It settles or abstains, never guesses: a caption naming two families, or none, sends the block on. Only the caption is decisive — nearby prose is collected for the model call rather than read as a rule, because a chart mentioned three sentences away is not a statement about this block.
+2. **One call to the tier's own vision model** for whatever the caption did not settle. The same model the description generator uses, so no new model and no new dependency enters the installer.
+
+**`unknown` is an answer.** Below a certainty floor the block keeps `unknown` rather than taking the model's best guess, because a wrong type selects a wrong prompt and produces confident prose about the wrong kind of thing, while `unknown` receives generic handling that is merely unremarkable.
+
+**Type and description are separate calls.** Folding them into one would be cheaper and would invert the dependency this section rests on: the type exists to select the prompt, so a combined call must use a generic one.
+
+Each classification carries a certainty on the same 0.00 to 1.00 scale as the description fence's `confidence` (section 4.8), since that is where it ends up, and records the evidence it rested on and the tier it ran under — the tier selects the model and therefore the answer (invariant 8).
+
+Quality is measured against a fixed reference set at `reference/classifier/`, not by inspection. **That set does not exist yet**, so the component's accuracy is currently unmeasured; see ADR-026 and `RUNBOOK.md` §9.
 
 ### 4.7 Description Generator
 

@@ -1,0 +1,293 @@
+"""The classifier's measurement harness (ADR-026, RUNBOOK section 9).
+
+The reference set is the instrument that decides whether a change to this component is an
+improvement. Without it, "it reads better to me" is the only available evidence, and CLAUDE.md
+section 9 names that as a mistake to avoid by name.
+
+Two sets, and the difference between them is the point:
+
+* **The committed core**, at `reference/classifier/`. Public-domain material, in the repository,
+  reviewable, and the only thing the acceptance bar is measured against. A bar that moves with
+  material nobody else can see is not a bar.
+* **A local extension**, at the path in `ASOY_REFERENCE_EXTENSION`. Modern books whose pages
+  cannot be committed. Tracked by its own manifest, reported alongside the core, and never used
+  to set or move the bar.
+
+**The core's images do not exist yet.** The books are being gathered. Everything here runs, and
+every acceptance number it produces is unmeasured until the set lands. `evaluate` on an empty set
+returns an empty result rather than a passing one, and the acceptance test skips rather than
+reporting a vacuous success.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+from collections import Counter
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from asoy.classifier import Classification, PictureBlock
+from asoy.fences import DescriptionType
+
+CORE_SET = Path("reference/classifier")
+MANIFEST_NAME = "manifest.json"
+MANIFEST_VERSION = 1
+
+EXTENSION_ENV_VAR = "ASOY_REFERENCE_EXTENSION"
+
+# The acceptance bar, measured on the committed core only (ADR-026).
+#
+# Cross-family means a pictorial block called graphical or the reverse — a photograph called a
+# chart. It is capped tightly because it is the failure that selects a wholly wrong description
+# approach: a chart prompt applied to a photograph produces confident prose about axes that do
+# not exist.
+MAX_CROSS_FAMILY_RATE = 0.05
+
+# Within-family confusion (photograph against illustration, diagram against chart) is recorded
+# and uncapped for v1. Both members of a pair get broadly similar description treatment, so the
+# cost of confusing them is real but much smaller. See ADR-026 for the reversal condition.
+
+# Above this, the model call is not earning its cost and the pre-pass should be doing more.
+MAX_UNKNOWN_RATE = 0.25
+
+# Which types are near-substitutes for each other. Confusion inside a family is a smaller error
+# than confusion across one, and the bar treats them differently.
+PICTORIAL = frozenset({DescriptionType.PHOTOGRAPH, DescriptionType.ILLUSTRATION})
+GRAPHICAL = frozenset({DescriptionType.DIAGRAM, DescriptionType.CHART})
+
+
+class ReferenceError(RuntimeError):
+    """The reference set could not be read. Raised rather than measured against silently."""
+
+
+@dataclass(frozen=True)
+class Entry:
+    """One reference block: the input, the expected answer, and why that answer is right."""
+
+    image: Path
+    source: str
+    locator: str
+    expected: DescriptionType
+    reasoning: str
+    caption: str = ""
+    context: str = ""
+
+    def to_block(self) -> PictureBlock:
+        try:
+            image = self.image.read_bytes()
+        except OSError as exc:
+            raise ReferenceError(f"Could not read {self.image}: {exc}") from exc
+        return PictureBlock(
+            image=image, caption=self.caption, context=self.context, locator=self.locator
+        )
+
+
+def _family(kind: DescriptionType) -> frozenset[DescriptionType] | None:
+    if kind in PICTORIAL:
+        return PICTORIAL
+    if kind in GRAPHICAL:
+        return GRAPHICAL
+    return None
+
+
+@dataclass
+class Metrics:
+    """What one run of the reference set produced."""
+
+    total: int = 0
+    matrix: Counter[tuple[DescriptionType, DescriptionType]] = field(default_factory=Counter)
+
+    @property
+    def correct(self) -> int:
+        return sum(count for (want, got), count in self.matrix.items() if want is got)
+
+    @property
+    def predicted_unknown(self) -> int:
+        return sum(
+            count for (_, got), count in self.matrix.items() if got is DescriptionType.UNKNOWN
+        )
+
+    @property
+    def expected_unknown(self) -> int:
+        return sum(
+            count for (want, _), count in self.matrix.items() if want is DescriptionType.UNKNOWN
+        )
+
+    @property
+    def cross_family(self) -> int:
+        """A pictorial block called graphical, or the reverse. The failure that matters most."""
+        return sum(
+            count
+            for (want, got), count in self.matrix.items()
+            if _family(want) is not None
+            and _family(got) is not None
+            and _family(want) != _family(got)
+        )
+
+    @property
+    def within_family(self) -> int:
+        """Photograph against illustration, diagram against chart. Recorded, uncapped for v1."""
+        return sum(
+            count
+            for (want, got), count in self.matrix.items()
+            if want is not got and _family(want) is not None and _family(want) == _family(got)
+        )
+
+    @property
+    def overconfident(self) -> int:
+        """Blocks whose right answer was `unknown` and which were given a type anyway.
+
+        ADR-026 keeps `unknown` rather than replacing it with a guess. This counts the times that
+        rule did not hold, which no other figure here would show.
+        """
+        return sum(
+            count
+            for (want, got), count in self.matrix.items()
+            if want is DescriptionType.UNKNOWN and got is not DescriptionType.UNKNOWN
+        )
+
+    def _rate(self, count: int) -> float:
+        return count / self.total if self.total else 0.0
+
+    @property
+    def cross_family_rate(self) -> float:
+        return self._rate(self.cross_family)
+
+    @property
+    def unknown_rate(self) -> float:
+        """Every block answered `unknown`, including the ones where that is the right answer.
+
+        This is the figure the acceptance bar names. Note that a core set holding roughly ten
+        legitimately-unknown blocks out of sixty starts at about 0.17 before a single mistake, so
+        the bar's real headroom for wrongly-unknown blocks is smaller than 0.25 suggests. See
+        `wrongly_unknown_rate` for the other reading.
+        """
+        return self._rate(self.predicted_unknown)
+
+    @property
+    def wrongly_unknown(self) -> int:
+        """`unknown` given where a real type was expected. The abstentions that cost something."""
+        return sum(
+            count
+            for (want, got), count in self.matrix.items()
+            if got is DescriptionType.UNKNOWN and want is not DescriptionType.UNKNOWN
+        )
+
+    @property
+    def wrongly_unknown_rate(self) -> float:
+        return self._rate(self.wrongly_unknown)
+
+    @property
+    def accuracy(self) -> float:
+        return self._rate(self.correct)
+
+    @property
+    def meets_bar(self) -> bool:
+        """Both capped figures within the bar. Never true on an empty set."""
+        return (
+            self.total > 0
+            and self.cross_family_rate <= MAX_CROSS_FAMILY_RATE
+            and self.unknown_rate <= MAX_UNKNOWN_RATE
+        )
+
+    def record(self, expected: DescriptionType, predicted: DescriptionType) -> None:
+        self.total += 1
+        self.matrix[(expected, predicted)] += 1
+
+    def confusion_table(self) -> str:
+        """The full matrix, expected down the side and predicted across."""
+        kinds = list(DescriptionType)
+        width = max(len(k.value) for k in kinds) + 2
+        header = "expected \\ got".ljust(16) + "".join(k.value.rjust(width) for k in kinds)
+        rows = [header]
+        for want in kinds:
+            cells = "".join(str(self.matrix[(want, got)]).rjust(width) for got in kinds)
+            rows.append(want.value.ljust(16) + cells)
+        return "\n".join(rows)
+
+    def report(self, label: str) -> str:
+        if not self.total:
+            return f"{label}: no entries. Nothing was measured."
+        return "\n".join(
+            [
+                f"{label}: {self.total} blocks, {self.accuracy:.1%} exact",
+                f"  cross-family   {self.cross_family:>3}  "
+                f"{self.cross_family_rate:.1%}  (bar: {MAX_CROSS_FAMILY_RATE:.0%})",
+                f"  within-family  {self.within_family:>3}  "
+                f"{self._rate(self.within_family):.1%}  (recorded, uncapped for v1)",
+                f"  unknown        {self.predicted_unknown:>3}  "
+                f"{self.unknown_rate:.1%}  (bar: {MAX_UNKNOWN_RATE:.0%}; "
+                f"{self.expected_unknown} of these are the right answer)",
+                f"  wrongly unknown{self.wrongly_unknown:>3}  {self.wrongly_unknown_rate:.1%}",
+                f"  overconfident  {self.overconfident:>3}  "
+                "(a type given where `unknown` was expected)",
+                "",
+                self.confusion_table(),
+            ]
+        )
+
+
+def load_manifest(directory: Path) -> tuple[Entry, ...]:
+    """Read one set's manifest. An absent directory is empty, not an error.
+
+    The core set is expected to be absent until the books are gathered, and a harness that raises
+    on that would have to be commented out rather than run.
+    """
+    manifest = directory / MANIFEST_NAME
+    if not manifest.is_file():
+        return ()
+
+    try:
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ReferenceError(f"Could not read {manifest}: {exc}") from exc
+
+    version = payload.get("version")
+    if version != MANIFEST_VERSION:
+        raise ReferenceError(
+            f"{manifest} declares version {version!r}; this build reads {MANIFEST_VERSION}."
+        )
+
+    entries: list[Entry] = []
+    for index, raw in enumerate(payload.get("entries", [])):
+        try:
+            expected = DescriptionType(raw["expected"])
+        except (KeyError, ValueError) as exc:
+            raise ReferenceError(f"{manifest} entry {index}: bad 'expected' ({exc}).") from None
+
+        for required in ("image", "source", "locator", "reasoning"):
+            if not str(raw.get(required, "")).strip():
+                raise ReferenceError(f"{manifest} entry {index}: '{required}' is required.")
+
+        entries.append(
+            Entry(
+                image=directory / str(raw["image"]),
+                source=str(raw["source"]),
+                locator=str(raw["locator"]),
+                expected=expected,
+                reasoning=str(raw["reasoning"]),
+                caption=str(raw.get("caption", "")),
+                context=str(raw.get("context", "")),
+            )
+        )
+    return tuple(entries)
+
+
+def extension_directory() -> Path | None:
+    """The local extension set, if one is configured. Never committed, never sets the bar."""
+    configured = os.environ.get(EXTENSION_ENV_VAR)
+    return Path(configured) if configured else None
+
+
+def evaluate(entries: tuple[Entry, ...], classify_one) -> Metrics:
+    """Run `classify_one` over every entry and record what came back.
+
+    `classify_one` takes a PictureBlock and returns a Classification, so a caller measuring a
+    change supplies its own without this module knowing about tiers or clients.
+    """
+    metrics = Metrics()
+    for entry in entries:
+        result: Classification = classify_one(entry.to_block())
+        metrics.record(entry.expected, result.type)
+    return metrics

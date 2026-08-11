@@ -57,3 +57,9 @@ $RECYCLE.BIN/
 *.log
 tmp/
 scratch/
+
+# Local reference-set extension. Modern book pages cannot be committed to a public
+# Apache 2.0 repository, and the extension never sets the acceptance bar anyway
+# (docs/DECISIONS.md ADR-026). Point ASOY_REFERENCE_EXTENSION anywhere; this is the
+# convenient in-tree spot, kept untracked.
+reference/local/

@@ -56,3 +56,9 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The reference run makes one real vision call per block, so it needs Ollama and the
+# tier's model. Excluded by default; run it with -m reference. See docs/RUNBOOK.md §9.
+addopts = "-m 'not reference'"
+markers = [
+    "reference: measures the classifier against the committed reference set",
+]
