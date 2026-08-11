@@ -87,7 +87,7 @@ Not forbidden — but they were decided deliberately, and a session that changes
 Match what is here rather than importing habits from elsewhere.
 
 - **Documentation is updated in the same commit as the change.** `docs/ARCHITECTURE.md` describes the system as-built; if your change makes it wrong, fixing it is part of your change, not a follow-up.
-- **`docs/STATE.md` is regenerated in the same commit whenever a component lands, an ADR is added, or a gap opens or closes.** It is the one file a fresh session reads to answer "where are we", so a stale one is worse than none — it will be believed. Name the change in the DECISIONS NEEDED block so it is reviewable.
+- **`docs/STATE.md` is regenerated in the same commit whenever a component lands, an ADR is added, or a gap opens or closes.** It is the one file a fresh session reads to answer "where are we", so a stale one is worse than none — it will be believed. Name the regeneration in the FOR REVIEW note (§8), which is where finished work that needs reading goes.
 
   Those three are the whole trigger list. The test count is deliberately not on it: it moves on nearly every commit, and a trigger that always fires carries no signal. STATE.md names its own sync point, so every figure in it is as of that commit and a reader who sees a count that does not match `main` learns the file's age, which the sync line already told them.
 
@@ -97,7 +97,7 @@ Match what is here rather than importing habits from elsewhere.
 - **Failure paths are written alongside the happy path**, not after. The unhappy path is where "looks finished" hides.
 - **Guards over fixes.** A bug fix without a regression test is not finished.
 - **User-facing messages are actionable.** "Ollama not found" is incomplete; the message says what to install and links it.
-- **A generalisable methodology lesson revises `BUILD-PLAYBOOK.md` in the same commit.** The playbook at the repository root is reusable method, not Asoy documentation. The trigger is narrow: something learned about *how to build* that would apply to a different project — a handoff pattern that failed and its correction, a delegation boundary that turned out wrong, a class of failure not specific to this domain, a convention that changed and why. It does not fire for a decision about Asoy (`docs/DECISIONS.md`), a defect and its fix (`docs/INCIDENTS.md`), or a user-facing limitation (`docs/SUPPORT.md`). The dividing line is whether the lesson survives a change of project. When it fires, revise the playbook in the same commit as the work that produced the lesson and name the revision in the DECISIONS NEEDED block so it is reviewable. Do not batch revisions for later; a lesson written from memory three weeks on is a worse lesson. Most commits do not qualify, and a playbook revised on every commit is noise — the point is that a future project can read it in one sitting.
+- **A generalisable methodology lesson revises `BUILD-PLAYBOOK.md` in the same commit.** The playbook at the repository root is reusable method, not Asoy documentation. The trigger is narrow: something learned about *how to build* that would apply to a different project — a handoff pattern that failed and its correction, a delegation boundary that turned out wrong, a class of failure not specific to this domain, a convention that changed and why. It does not fire for a decision about Asoy (`docs/DECISIONS.md`), a defect and its fix (`docs/INCIDENTS.md`), or a user-facing limitation (`docs/SUPPORT.md`). The dividing line is whether the lesson survives a change of project. When it fires, revise the playbook in the same commit as the work that produced the lesson and name the revision in the FOR REVIEW note (§8), which is where finished work that needs reading goes. Do not batch revisions for later; a lesson written from memory three weeks on is a worse lesson. Most commits do not qualify, and a playbook revised on every commit is noise — the point is that a future project can read it in one sitting.
 
 ## 7. Commands
 
@@ -131,6 +131,8 @@ UI framework: `pywebview` (BSD, WebView2 backend on Windows) · Language: `Pytho
    - it needs something outside this machine — a licence answer nobody publishes, a book, hardware, a platform, or money.
 
    When stopping, present the decision the way a decision should be presented: numbered options, a recommendation, the reasoning, and what would flip it. Do not merely report that a decision is needed. Everything else is implementation and is finished, not escalated; end the report by saying the block is empty.
+
+   **After it, a FOR REVIEW note: one line per item, no decision requested.** It exists for finished work the maintainer would want to read and would otherwise never look for, because a diff nobody was told about is a diff nobody reads. Exactly two things go in it — a `docs/STATE.md` regeneration and a `BUILD-PLAYBOOK.md` revision — and nothing else, however interesting the session found its own work. A note that accepts anything becomes the full report the DECISIONS NEEDED convention exists to abolish.
 
 ## 9. Mistakes to avoid here specifically
 

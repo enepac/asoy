@@ -241,7 +241,9 @@ Note what this is: the step-gating failure above, recurring one level down. Gati
 
 Add this to `CLAUDE.md`:
 
-> **End every report with a DECISIONS NEEDED section**, or state explicitly that it is empty. List anything that touches an invariant, falls under the ask-first list, contradicts a recorded ADR, or resolves an ambiguity the specification did not settle. One line each, naming the choice made or deferred. Everything else is implementation and does not need to leave the code surface.
+> **DECISIONS NEEDED is the stop condition, not a closing report.** After finding a defect or an unexpected result, continue: diagnose it, fix it, guard it, document it, and commit, in the same session, without waiting for instruction. Stop and ask only when the thing touches an invariant, falls under the ask-first list, contradicts a recorded ADR, rests on a fact that lives only in the maintainer's head — a preference, a priority, a scope call, what "good enough" means here — or needs something outside the machine: a licence answer nobody publishes, hardware, a platform, money. When stopping, present the decision the way a decision should be presented: numbered options, a recommendation, the reasoning, and what would flip it. Do not merely report that a decision is needed. Everything else is implementation and is finished, not escalated.
+>
+> **After it, a FOR REVIEW note: one line per item, no decision requested**, for finished work the maintainer would want to read and would otherwise never look for. Name the cases it accepts and admit nothing else — for Asoy, exactly two: a `STATE.md` regeneration and a playbook revision. A note that takes whatever a session found interesting becomes the full report the section above exists to abolish.
 
 Now the code surface sorts its own output. You read a full report only when you want to. Usually you read four or five lines, and often they are empty.
 
@@ -249,7 +251,7 @@ Now the code surface sorts its own output. You read a full report only when you 
 
 Loose delegation means most of what is learned about the method is learned inside the code surface, where you are not watching. Unless something makes it write that down, the lesson stays there. So add a second convention to `CLAUDE.md`, next to the first:
 
-> **A generalisable methodology lesson revises this playbook in the same commit**, and the revision is named in the DECISIONS NEEDED block. The trigger is narrow: something learned about *how to build* that would apply to a different project. A decision about the product goes to `DECISIONS.md`, a defect and its fix to `INCIDENTS.md`, a user-facing limitation to `SUPPORT.md`. The test is whether the lesson survives a change of project.
+> **A generalisable methodology lesson revises this playbook in the same commit**, and the revision is named in the FOR REVIEW note. The trigger is narrow: something learned about *how to build* that would apply to a different project. A decision about the product goes to `DECISIONS.md`, a defect and its fix to `INCIDENTS.md`, a user-facing limitation to `SUPPORT.md`. The test is whether the lesson survives a change of project.
 
 Two halves carry the weight. **Same commit**, because a lesson reconstructed from memory weeks later is a worse lesson — the specifics that made it useful are the first thing to go. And **narrow**, because a playbook revised on every commit stops being readable in one sitting, which is the only property that makes it worth reusing.
 
@@ -321,7 +323,7 @@ The same test applies to trigger lists. Asoy's `STATE.md` names three triggers a
 4. Scaffold with no heavy dependencies.
 5. Dependencies in stages, with a named hard stop.
 6. Components, riskiest foundation first, proven on real hardware.
-7. Release the gating. Outcomes and constraints. Read the DECISIONS NEEDED block.
+7. Release the gating. Outcomes and constraints. Read the DECISIONS NEEDED block and the FOR REVIEW note.
 
 The first three phases feel slow and are the reason the rest can be fast. By the time the code surface is building features, it has already read the invariants, the blast radius, the conventions, and the reasoning behind every settled question. That is why its reports start catching your errors instead of producing plausible-looking output.
 
