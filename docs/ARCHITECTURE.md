@@ -1,7 +1,11 @@
 # ARCHITECTURE
 
 **Project:** Asoy
-**Document status:** Specification, partly built. Describes the system as it is intended to exist when shipped. Sections 4.1 through 4.6, 4.8, and 4.9 exist in code; the description generator (4.7) does not, and neither does checkpointing or the review UI.
+**Document status:** Specification, partly built. Describes the system as it is intended to exist when shipped.
+**Built:** format router (4.3), document parser (4.4), block classifier (4.6), assembler (4.8), exporter (4.9).
+**Partial:** the OCR layer (4.5) reads scanned pages but has no confidence floor and no review flagging; the orchestrator (4.2) converts but does not checkpoint; the desktop shell (4.1) opens and reports the tier but cannot start a conversion — only `asoy convert` can.
+**Not built:** the description generator (4.7), the review UI. Every picture is emitted as a marked placeholder.
+`STATE.md` carries the detail and is regenerated from commands rather than edited.
 **Applies to:** No released version yet. This describes the target for 1.0.0.
 **Last verified against code:** 2026-08-10, at the commit making scanned input work (ADR-029).
 
@@ -258,8 +262,11 @@ This is the single largest source of setup friction in the product and the most 
 | Output `.md` and `.txt` | User-chosen output directory | Permanent, user-owned |
 | Job records (tier, timings, flags, errors) | Application data directory | Until the user clears them |
 | Application logs | Application data directory | Rotated |
+| OCR model weights | `%LOCALAPPDATA%\Asoy\ocr-models`, or the path in `ASOY_OCR_MODELS` | Until deleted by hand; see below |
 
 Job records and logs contain file paths and block-level metadata. They contain no book text and no page images. This matters because logs are what users attach to bug reports.
+
+**The OCR weights outlive an uninstall.** They are roughly 32 MB fetched by `asoy fetch-ocr-models` (ADR-029), and they sit outside the installation directory precisely so a packaged install can be read-only — which also means an uninstaller that only removes the program leaves them behind. Removing them is deleting that directory. Any uninstall step that claims to remove everything has to delete it explicitly, and the same applies to the override path when `ASOY_OCR_MODELS` is set, which Asoy does not control and cannot assume is disposable.
 
 ## 8. External dependencies
 

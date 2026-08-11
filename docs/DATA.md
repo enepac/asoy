@@ -25,6 +25,7 @@ Asoy holds your books, your converted output, and some technical records about c
 | Job records | Application data directory | Which tier ran, timings, error flags, file paths | Until you clear them |
 | Application logs | Application data directory | Technical events, errors, file paths | Rotated; older logs deleted automatically |
 | Settings | Application data directory | Your preferences, output folder path | Until you clear them or uninstall |
+| Text-recognition models | `%LOCALAPPDATA%\Asoy\ocr-models` | Downloaded model files. No book content | Until you delete the folder — **an uninstall does not remove them** |
 
 Exact paths are shown in the application and listed in `ARCHITECTURE.md` §7.
 
@@ -74,7 +75,8 @@ Neither receives anything from Asoy other than the file or image being processed
 
 1. **Output files** — delete them from wherever you saved them. They are ordinary files.
 2. **Job records, logs, and settings** — clear them from within Asoy, or delete the application data directory.
-3. **Uninstall Asoy** through Windows. This removes the program.
+3. **Text-recognition models**, if you downloaded them — delete `%LOCALAPPDATA%\Asoy\ocr-models`. About 32 MB. These are program files rather than anything about you or your books, but uninstalling Asoy does not remove them, so they are listed here rather than left to be found later. If you set `ASOY_OCR_MODELS` to put them elsewhere, delete that folder instead.
+4. **Uninstall Asoy** through Windows. This removes the program.
 4. **Ollama and its models** are separate. Uninstall Ollama independently if you want the model files gone; they are large.
 
 Nothing survives elsewhere, because nothing was ever elsewhere. There is no account to close and no deletion request to submit, because there is no one holding a copy.
