@@ -13,8 +13,8 @@
 | | |
 |---|---|
 | Version | 0.1.0 (`pyproject.toml`, confirmed by `asoy --version`) |
-| Branch / commit | `main` at `a69c347`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
-| Push state | **5 commits ahead of `origin/main`.** Last pushed: `7a9d599` |
+| Branch / commit | `main` at `45b65e8`. This is the commit the lines below were verified against; the commit carrying an update to this file is always one later than the commit it describes |
+| Push state | In sync with `origin/main` at `45b65e8`, and one ahead of it until the commit carrying this line is itself pushed |
 | Tests | 149 passing (calibre 20, environment 36, pipeline 22, router 24, smoke 21, tiers 26) |
 | Highest ADR | ADR-024 |
 | Dependency tree | 117 packages resolved; license scan shows no GPL-family or AGPL entry |
